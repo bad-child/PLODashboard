@@ -29,11 +29,35 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $theme = \Illuminate\Support\Facades\Cache::remember('theme_mode', 60, function () {
+            $setting = \App\Models\Setting::where('key', 'theme_mode')->first();
+            return $setting ? $setting->value : 'dark';
+        });
+        
+        $rolePermissions = \Illuminate\Support\Facades\Cache::remember('role_permissions', 60, function () {
+            $setting = \App\Models\Setting::where('key', 'role_permissions')->first();
+            return $setting && $setting->value ? json_decode($setting->value, true) : [];
+        });
+
+        // Determine user permissions for frontend
+        $userPermissions = [];
+        $user = $request->user();
+        if ($user) {
+            if ($user->isAdmin()) {
+                // Admin implicitly has all configured permissions
+                $userPermissions = ['admin.users.index', 'admin.settings'];
+            } else {
+                $userPermissions = $rolePermissions[$user->role] ?? [];
+            }
+        }
+        
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'permissions' => $userPermissions,
             ],
+            'theme' => $theme,
         ];
     }
 }

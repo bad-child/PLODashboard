@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role'])]
+#[Fillable(['name', 'nik', 'email', 'password', 'role', 'last_login_at', 'last_login_ip', 'last_login_device', 'avatar'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -56,6 +56,23 @@ class User extends Authenticatable
     }
 
     /**
+     * Get avatar url accessor
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if ($this->avatar) {
+            // Check if avatar is uploaded directly to public (starts with avatars/)
+            if (str_starts_with($this->avatar, 'avatars/')) {
+                return asset($this->avatar);
+            }
+            return asset('storage/' . $this->avatar);
+        }
+        return null;
+    }
+
+    protected $appends = ['avatar_url'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -65,6 +82,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'last_login_at'     => 'datetime',
         ];
     }
 }

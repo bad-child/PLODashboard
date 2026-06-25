@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: '',
+        nik: '',
         password: '',
         remember: false,
     });
@@ -67,10 +67,10 @@ export default function Login({ status, canResetPassword }) {
                     )}
 
                     <form onSubmit={submit} className="login-form">
-                        {/* Email */}
+                        {/* NIK */}
                         <div className="form-group">
-                            <label htmlFor="email" className="form-label">
-                                Email Address
+                            <label htmlFor="nik" className="form-label">
+                                NIK
                             </label>
                             <div className="input-wrapper">
                                 <span className="input-icon">
@@ -80,18 +80,18 @@ export default function Login({ status, canResetPassword }) {
                                     </svg>
                                 </span>
                                 <input
-                                    id="email"
-                                    type="email"
-                                    name="email"
-                                    value={data.email}
-                                    className={`form-input ${errors.email ? 'input-error' : ''}`}
-                                    placeholder="nama@example.com"
+                                    id="nik"
+                                    type="text"
+                                    name="nik"
+                                    value={data.nik}
+                                    className={`form-input ${errors.nik ? 'input-error' : ''}`}
+                                    placeholder="Masukkan NIK Anda"
                                     autoComplete="username"
                                     autoFocus
-                                    onChange={(e) => setData('email', e.target.value)}
+                                    onChange={(e) => setData('nik', e.target.value)}
                                 />
                             </div>
-                            {errors.email && <p className="error-msg">{errors.email}</p>}
+                            {errors.nik && <p className="error-msg">{errors.nik}</p>}
                         </div>
 
                         {/* Password */}
@@ -186,13 +186,7 @@ export default function Login({ status, canResetPassword }) {
                         </button>
                     </form>
 
-                    {/* Register link */}
-                    <p className="register-text">
-                        Belum punya akun?{' '}
-                        <Link href={route('register')} className="register-link">
-                            Daftar sekarang
-                        </Link>
-                    </p>
+
                 </div>
             </div>
 

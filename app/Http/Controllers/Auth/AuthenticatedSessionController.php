@@ -34,6 +34,14 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerate();
 
         $user = Auth::user();
+        
+        // Record login activity
+        $user->update([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+            'last_login_device' => $request->userAgent(),
+        ]);
+
         $dashboardRoute = $user->getDashboardRoute();
 
         return redirect()->intended(route($dashboardRoute, absolute: false));

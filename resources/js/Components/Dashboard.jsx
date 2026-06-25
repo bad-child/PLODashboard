@@ -1,5 +1,5 @@
 import { usePage, router } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, LabelList, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import DashboardLayout from '@/Layouts/DashboardLayout';
@@ -40,7 +40,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
             <div
                 className="filter-select"
                 style={{
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--card-border)',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -62,7 +62,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                     left: 0,
                     right: 0,
                     marginTop: '4px',
-                    background: '#0f172a',
+                    background: 'var(--popover-bg)',
                     border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: '8px',
                     zIndex: 50,
@@ -76,11 +76,11 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                             onChange={(e) => setSearch(e.target.value)}
                             style={{
                                 width: '100%',
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'var(--card-border)',
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 borderRadius: '4px',
                                 padding: '6px 8px',
-                                color: '#f1f5f9',
+                                color: 'var(--text-primary)',
                                 fontSize: '13px',
                                 outline: 'none'
                             }}
@@ -89,7 +89,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                     </div>
                     <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                         <div
-                            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: value === '' ? '#3b82f6' : '#f1f5f9', background: value === '' ? 'rgba(255,255,255,0.05)' : 'transparent' }}
+                            style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '13px', color: value === '' ? 'var(--accent)' : 'var(--text-primary)', background: value === '' ? 'var(--card-border)' : 'transparent' }}
                             onClick={() => { onChange(''); setIsOpen(false); setSearch(''); }}
                         >
                             {placeholder}
@@ -101,19 +101,19 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                                     padding: '8px 12px',
                                     cursor: 'pointer',
                                     fontSize: '13px',
-                                    color: value === item[valueKey] ? '#3b82f6' : '#f1f5f9',
-                                    background: value === item[valueKey] ? 'rgba(255,255,255,0.05)' : 'transparent',
+                                    color: value === item[valueKey] ? 'var(--accent)' : 'var(--text-primary)',
+                                    background: value === item[valueKey] ? 'var(--card-border)' : 'transparent',
                                     borderTop: '1px solid rgba(255,255,255,0.02)'
                                 }}
                                 onClick={() => { onChange(item[valueKey]); setIsOpen(false); setSearch(''); }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = value === item[valueKey] ? 'rgba(255,255,255,0.05)' : 'transparent'}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--card-border)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = value === item[valueKey] ? 'var(--card-border)' : 'transparent'}
                             >
                                 {item[valueKey]} ({item[labelKey]})
                             </div>
                         ))}
                         {filteredItems.length === 0 && (
-                            <div style={{ padding: '8px 12px', fontSize: '13px', color: '#94a3b8', textAlign: 'center' }}>
+                            <div style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
                                 Tidak ditemukan
                             </div>
                         )}
@@ -127,32 +127,52 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
 // New Monthly Trend Chart
 const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter }) => {
     const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    const fetchData = async (retryCount = 0) => {
+        setLoading(true);
+        setError(false);
+        const params = {
+            filter: filterType,
+            year_start: selectedYearStart,
+            year_end: selectedYearEnd,
+            month_start: selectedMonthStart,
+            month_end: selectedMonthEnd,
+            day_start: selectedDayStart,
+            day_end: selectedDayEnd,
+            fund_center: selectedFundCenter,
+        };
+        // Add nocache param on retries to bust server cache
+        if (retryCount > 0) {
+            params._nocache = Date.now();
+        }
+        try {
+            const response = await axios.get(route('api.dashboard.monthly_trend'), { params });
+            const result = response.data;
+
+            // Check if ALL budget values are 0 - means data didn't load properly
+            const allBudgetZero = Array.isArray(result) && result.length > 0 && result.every(item => (item.Budget || 0) === 0);
+
+            if (allBudgetZero && retryCount < 10) {
+                console.warn(`Budget all zero, retry #${retryCount + 1} in 5s...`);
+                setTimeout(() => {
+                    fetchData(retryCount + 1);
+                }, 5000);
+                return; // Keep loading spinner
+            }
+
+            setData(result);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching monthly trend, retrying in 5s...", error);
+            setTimeout(() => {
+                fetchData(retryCount + 1);
+            }, 5000);
+        }
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const response = await axios.get(route('api.dashboard.monthly_trend'), {
-                    params: {
-                        filter: filterType,
-                        year_start: selectedYearStart,
-                        year_end: selectedYearEnd,
-                        month_start: selectedMonthStart,
-                        month_end: selectedMonthEnd,
-                        day_start: selectedDayStart,
-                        day_end: selectedDayEnd,
-                        fund_center: selectedFundCenter,
-                    }
-                });
-                setData(response.data);
-            } catch (error) {
-                console.error(`Error fetching monthly trend:`, error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
     }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
 
@@ -197,11 +217,11 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
                 <div style={{ display: 'flex', gap: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }}></span>
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#94a3b8' }}>Budget</span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>Budget</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#EF4444', display: 'inline-block' }}></span>
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: '#94a3b8' }}>Actual</span>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-muted)' }}>Actual</span>
                     </div>
                 </div>
             </div>
@@ -213,17 +233,17 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
                     >
                         <defs>
                             <linearGradient id="colorBudget" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                             </linearGradient>
                             <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
+                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                        <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={{stroke: 'rgba(255,255,255,0.1)'}} />
-                        <YAxis tickFormatter={(value) => formatCurrency(value)} stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={{ stroke: 'var(--card-border)' }} />
+                        <YAxis tickFormatter={(value) => formatCurrency(value)} stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                         <RechartsTooltip content={<CustomTooltip />} />
                         <Area type="monotone" dataKey="Budget" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorBudget)" activeDot={{ r: 6 }} />
                         <Area type="monotone" dataKey="Actual" stroke="#EF4444" strokeWidth={3} fillOpacity={1} fill="url(#colorActual)" activeDot={{ r: 6 }} />
@@ -234,57 +254,60 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
     );
 };
 
-// Reusable Dynamic Bar Chart
-const PercentageChart = ({ defaultTitle, defaultCategory, filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, planColor, actualColor, commitmentItems, selectedFundCenter }) => {
+// Reusable Dynamic Bar Chart (Now Nominal instead of Percentage)
+const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, planColor, actualColor, commitmentItems, selectedFundCenter }) => {
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
     const [selectedItem, setSelectedItem] = useState('');
 
-    useEffect(() => {
-        const fetchChartData = async () => {
-            setLoading(true);
-            try {
-                const params = {
-                    filter: filterType,
-                    year_start: selectedYearStart,
-                    year_end: selectedYearEnd,
-                    month_start: selectedMonthStart,
-                    month_end: selectedMonthEnd,
-                    day_start: selectedDayStart,
-                    day_end: selectedDayEnd,
-                    fund_center: selectedFundCenter,
-                };
+    const fetchChartData = async () => {
+        setLoading(true);
+        setError(false);
+        try {
+            const params = {
+                filter: filterType,
+                year_start: selectedYearStart,
+                year_end: selectedYearEnd,
+                month_start: selectedMonthStart,
+                month_end: selectedMonthEnd,
+                day_start: selectedDayStart,
+                day_end: selectedDayEnd,
+                fund_center: selectedFundCenter,
+            };
 
-                if (selectedItem) {
-                    params.commitment_item = selectedItem;
-                } else {
-                    params.category = defaultCategory;
-                }
-
-                const response = await axios.get(route('api.dashboard.budget_vs_actual'), { params });
-                setChartData(response.data);
-            } catch (error) {
-                console.error(`Error fetching chart data:`, error);
-            } finally {
-                setLoading(false);
+            if (selectedItem) {
+                params.commitment_item = selectedItem;
+            } else {
+                params.category = defaultCategory;
             }
-        };
 
+            const response = await axios.get(route('api.dashboard.budget_vs_actual'), { params });
+            setChartData(response.data);
+            setLoading(false);
+            setError(false);
+        } catch (error) {
+            console.error(`Error fetching chart data, retrying in 5s...`, error);
+            // Silently retry to keep the loading spinner going
+            setTimeout(() => {
+                fetchChartData();
+            }, 5000);
+        }
+    };
+
+    useEffect(() => {
         fetchChartData();
     }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedItem, defaultCategory, selectedFundCenter]);
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-                <div className="custom-tooltip" style={{ background: '#1e293b', padding: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 1000 }}>
-                    <p className="label" style={{ color: '#f1f5f9', fontWeight: 600, marginBottom: '8px' }}>{label}</p>
+                <div className="custom-tooltip" style={{ background: 'var(--popover-bg)', padding: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', zIndex: 1000 }}>
+                    <p className="label" style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>{label}</p>
                     {payload.map((entry, index) => {
-                        const nominalKey = entry.name === 'Plan' ? 'plan_nominal' : 'actual_nominal';
-                        const nominalValue = entry.payload[nominalKey];
                         return (
                             <p key={index} style={{ color: entry.color, fontSize: '13px', margin: '4px 0' }}>
-                                {entry.name}: {entry.value}%
-                                {nominalValue !== undefined && ` (${formatCurrency(nominalValue)})`}
+                                {entry.name}: {formatCurrency(entry.value)}
                             </p>
                         );
                     })}
@@ -309,45 +332,46 @@ const PercentageChart = ({ defaultTitle, defaultCategory, filterType, selectedYe
                         onChange={setSelectedItem}
                         placeholder="-- Pilih Commitment Item --"
                     />
-                </div>    <h3 className="section-title-small" style={{ fontSize: '15px', color: '#94a3b8' }}>{selectedDesc}</h3>
+                </div>
+                <h3 className="section-title-small" style={{ margin: 0, textAlign: 'center' }}>
+                    {selectedDesc}
+                </h3>
             </div>
 
-            <div className="chart-container-small">
+            <div className="chart-container-small flex-center" style={{ minHeight: '300px' }}>
                 {loading ? (
                     <div className="loading-state">
                         <svg className="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth="3" strokeDasharray="32" strokeLinecap="round" strokeDashoffset="12" /></svg>
                         Memuat Data...
                     </div>
                 ) : chartData.length === 0 ? (
-                    <div className="empty-state">
-                        <p>Tidak ada data.</p>
-                    </div>
+                    <div className="empty-state">Data tidak tersedia.</div>
                 ) : (
                     <ResponsiveContainer width="100%" height={350}>
                         <BarChart data={chartData} margin={{ top: 25, right: 10, left: -20, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                             <XAxis
                                 dataKey="name"
-                                tick={{ fill: '#e2e8f0', fontSize: 11, fontWeight: 500 }}
-                                axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                                tick={{ fill: 'var(--text-primary)', fontSize: 11, fontWeight: 500 }}
+                                axisLine={{ stroke: 'var(--card-border)' }}
                                 tickLine={false}
                                 dy={10}
                             />
                             <YAxis
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                                 axisLine={false}
                                 tickLine={false}
-                                tickFormatter={formatPercent}
+                                tickFormatter={formatCurrency}
                             />
                             <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                             <Legend wrapperStyle={{ paddingTop: '15px', fontSize: '12px' }} iconType="square" />
 
-                            <Bar dataKey="Plan" name="Plan" fill={planColor} radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="Plan" position="top" formatter={formatPercent} fill="#f1f5f9" fontSize={11} fontWeight={600} dy={-5} />
+                            <Bar dataKey="plan_nominal" name="Plan" fill={planColor} radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="plan_nominal" position="top" formatter={formatCurrency} fill="var(--text-primary)" fontSize={11} fontWeight={600} dy={-5} />
                             </Bar>
 
-                            <Bar dataKey="Actual" name="Actual" fill={actualColor} radius={[4, 4, 0, 0]} maxBarSize={45}>
-                                <LabelList dataKey="Actual" position="top" formatter={formatPercent} fill="#f1f5f9" fontSize={11} fontWeight={600} dy={-5} />
+                            <Bar dataKey="actual_nominal" name="Actual" fill={actualColor} radius={[4, 4, 0, 0]} maxBarSize={45}>
+                                <LabelList dataKey="actual_nominal" position="top" formatter={formatCurrency} fill="var(--text-primary)" fontSize={11} fontWeight={600} dy={-5} />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
@@ -451,8 +475,8 @@ const CostCompositionChart = ({ filterType, selectedYearStart, selectedYearEnd, 
                         </Pie>
                         <RechartsTooltip
                             formatter={(value) => formatCurrency(value)}
-                            contentStyle={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                            itemStyle={{ color: '#fff' }}
+                            contentStyle={{ background: 'var(--popover-bg)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'var(--text-primary)' }}
+                            itemStyle={{ color: 'var(--text-primary)' }}
                         />
                     </PieChart>
                 </ResponsiveContainer>
@@ -508,7 +532,7 @@ const VarianceDetailsModal = ({ isOpen, onClose, parentDesc, filterParams }) => 
                     <h2 style={{ margin: 0, color: '#78350F', fontSize: '1.25rem', fontWeight: 'bold' }}>Detail Variance: {parentDesc}</h2>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#92400E' }}>&times;</button>
                 </div>
-                
+
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '40px', color: '#92400E' }}>Memuat detail...</div>
@@ -628,7 +652,7 @@ const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, sele
                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,53,15,0.1)" horizontal={false} />
                         <XAxis type="number" tickFormatter={(value) => formatCurrency(value)} stroke="#92400E" fontSize={12} />
                         <YAxis type="category" dataKey="name" width={180} stroke="#92400E" fontSize={12} tick={{ fill: '#78350F', fontWeight: '600' }} />
-                        <RechartsTooltip content={<CustomTooltip />} cursor={{fill: 'rgba(255,224,102,0.4)'}} />
+                        <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,224,102,0.4)' }} />
                         <Bar dataKey="variance" fill="#EF4444" radius={[0, 8, 8, 0]} barSize={24} onClick={(data) => onBarClick && onBarClick(data.name)} style={{ cursor: 'pointer' }} />
                     </BarChart>
                 </ResponsiveContainer>
@@ -655,7 +679,7 @@ const KpiCards = ({ data, loading }) => {
         {
             title: "Revenue",
             icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>,
-            value: data.revenue === null ? "N/A" : formatCurrency(data.revenue),
+            value: "-",
             trendText: "No data",
             trendColor: "#94a3b8",
             barColor: "#10b981" // green
@@ -679,7 +703,7 @@ const KpiCards = ({ data, loading }) => {
         {
             title: "EBITDA",
             icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>,
-            value: formatCurrency(data.ebitda),
+            value: "-",
             trendText: data.ebitda_margin !== null ? `Margin ${data.ebitda_margin}%` : "Margin N/A",
             trendColor: "#94a3b8",
             barColor: "#f59e0b" // orange
@@ -705,6 +729,67 @@ const KpiCards = ({ data, loading }) => {
                     </div>
                 </div>
             ))}
+        </div>
+    );
+};
+
+const SummaryTable = ({ data, loading }) => {
+    if (loading) {
+        return <div className="card" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading Summary...</div>;
+    }
+    if (!data || !data.columns || data.data.length === 0) {
+        return null;
+    }
+
+    return (
+        <div className="card summary-table-container">
+            <div className="card-header">
+                <h3 className="card-title">Summary Cost vs Actual</h3>
+            </div>
+            <div className="card-body" style={{ overflowX: 'auto', padding: '0' }}>
+                <table className="summary-table">
+                    <thead>
+                        <tr>
+                            <th className="sticky-col">Commitment Item<br />(Deskripsi)</th>
+                            <th className="sticky-col-2">Day/Bulan</th>
+                            {data.columns.map((col, idx) => (
+                                <th key={idx}>{col}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {data.data.map((row, idx) => (
+                            <Fragment key={idx}>
+                                <tr>
+                                    <td rowSpan="2" className="sticky-col fw-bold">{row.DescCommit}</td>
+                                    <td className="sticky-col-2">Plan</td>
+                                    {data.columns.map((col, cIdx) => (
+                                        <td key={`plan-${cIdx}`}>{formatCurrency(row.Plan[col] || 0)}</td>
+                                    ))}
+                                </tr>
+                                <tr>
+                                    <td className="sticky-col-2">Actual</td>
+                                    {data.columns.map((col, cIdx) => (
+                                        <td key={`act-${cIdx}`}>{formatCurrency(row.Actual[col] || 0)}</td>
+                                    ))}
+                                </tr>
+                            </Fragment>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            <style>{`
+                .summary-table-container { margin-top: 24px; }
+                .summary-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+                .summary-table th, .summary-table td { border: 1px solid var(--card-border); padding: 10px 16px; white-space: nowrap; }
+                .summary-table thead th { background: var(--solid-card-bg); color: var(--text-primary); font-weight: 600; position: sticky; top: 0; z-index: 10; }
+                .summary-table tbody tr:hover { background: var(--popover-bg); }
+                .summary-table tbody td { color: var(--text-secondary); }
+                .summary-table .sticky-col { position: sticky; left: 0; background: var(--solid-card-bg); z-index: 5; font-weight: 600; color: var(--text-primary); border-right: 1px solid var(--card-border); }
+                .summary-table .sticky-col-2 { position: sticky; left: 200px; background: var(--solid-card-bg); z-index: 5; border-right: 1px solid var(--card-border); }
+                .summary-table tbody tr:hover .sticky-col, .summary-table tbody tr:hover .sticky-col-2 { background: var(--popover-bg); }
+                .fw-bold { font-weight: 600; }
+            `}</style>
         </div>
     );
 };
@@ -738,6 +823,11 @@ export default function Dashboard({ role = 'user' }) {
     const [kpiData, setKpiData] = useState(null);
     const [kpiLoading, setKpiLoading] = useState(false);
 
+    const [summaryData, setSummaryData] = useState(null);
+    const [summaryLoading, setSummaryLoading] = useState(false);
+
+    const [runningText, setRunningText] = useState("");
+
     const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const days = Array.from({ length: 31 }, (_, i) => (i + 1).toString().padStart(2, '0'));
     // Generate years dynamically around current year
@@ -758,9 +848,32 @@ export default function Dashboard({ role = 'user' }) {
             } catch (err) {
                 console.error("Failed to load fund centers", err);
             }
+            try {
+                const rtResponse = await axios.get(route('api.settings.running_text'));
+                if (rtResponse.data && rtResponse.data.text) {
+                    setRunningText(rtResponse.data.text);
+                }
+            } catch (err) {
+                console.error("Failed to load running text", err);
+            }
         };
         fetchItems();
     }, []);
+
+    const [isClearing, setIsClearing] = useState(false);
+
+    const handleClearCache = async () => {
+        setIsClearing(true);
+        try {
+            await axios.get('/api/settings/running-text?clear_cache=1');
+            window.location.reload();
+        } catch (err) {
+            setIsClearing(false);
+            alert("Tombol gagal: " + (err.response?.status || err.message));
+            console.error("Failed to clear cache", err);
+        }
+    };
+
 
     useEffect(() => {
         const fetchKpis = async () => {
@@ -770,9 +883,9 @@ export default function Dashboard({ role = 'user' }) {
                     params: {
                         filter: filterType,
                         year_start: selectedYearStart,
-                        year_end: selectedYearEnd,
+                        year_end: selectedYearStart,
                         month_start: selectedMonthStart,
-                        month_end: selectedMonthEnd,
+                        month_end: filterType === 'daily' ? selectedMonthStart : selectedMonthEnd,
                         day_start: selectedDayStart,
                         day_end: selectedDayEnd,
                         fund_center: selectedFundCenter,
@@ -787,15 +900,77 @@ export default function Dashboard({ role = 'user' }) {
         };
 
         fetchKpis();
-    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+
+    useEffect(() => {
+        const fetchSummary = async () => {
+            setSummaryLoading(true);
+            try {
+                const response = await axios.get(route('api.dashboard.summary_table'), {
+                    params: {
+                        filter: filterType,
+                        year_start: selectedYearStart,
+                        year_end: selectedYearStart,
+                        month_start: selectedMonthStart,
+                        month_end: filterType === 'daily' ? selectedMonthStart : selectedMonthEnd,
+                        day_start: selectedDayStart,
+                        day_end: selectedDayEnd,
+                        fund_center: selectedFundCenter,
+                    }
+                });
+                setSummaryData(response.data);
+            } catch (error) {
+                console.error("Failed to load Summary Data", error);
+            } finally {
+                setSummaryLoading(false);
+            }
+        };
+
+        fetchSummary();
+    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
 
     return (
         <DashboardLayout>
             <div className="dashboard-wrap">
                 <main className="main-content">
                     <header className="topbar">
-                        <div>
-                            <h1 className="page-title">PLO Dashboard</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <h1 className="page-title">Profit & Loss Dashboard</h1>
+                            <button 
+                                onClick={handleClearCache}
+                                disabled={isClearing}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    background: 'var(--card-bg)',
+                                    border: '1px solid var(--card-border)',
+                                    borderRadius: '8px',
+                                    padding: '8px',
+                                    cursor: isClearing ? 'wait' : 'pointer',
+                                    color: 'var(--text-muted)',
+                                    transition: 'all 0.2s',
+                                    marginTop: '4px',
+                                    opacity: isClearing ? 0.5 : 1
+                                }}
+                                title="Refresh & Clear Cache"
+                                onMouseEnter={(e) => { if(!isClearing) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; } }}
+                                onMouseLeave={(e) => { if(!isClearing) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--card-border)'; } }}
+                            >
+                                <svg 
+                                    width="18" 
+                                    height="18" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                    className={isClearing ? "spinner" : ""}
+                                >
+                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-5.27l3.08-3.08"/>
+                                </svg>
+                            </button>
                         </div>
 
                         <div className="global-filters">
@@ -836,10 +1011,14 @@ export default function Dashboard({ role = 'user' }) {
                                     <select className="filter-select" value={selectedMonthStart} onChange={(e) => setSelectedMonthStart(e.target.value)}>
                                         {months.map(m => <option key={m} value={m}>{m}</option>)}
                                     </select>
-                                    <span className="filter-label">-</span>
-                                    <select className="filter-select" value={selectedMonthEnd} onChange={(e) => setSelectedMonthEnd(e.target.value)}>
-                                        {months.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </select>
+                                    {filterType === 'monthly' && (
+                                        <>
+                                            <span className="filter-label">-</span>
+                                            <select className="filter-select" value={selectedMonthEnd} onChange={(e) => setSelectedMonthEnd(e.target.value)}>
+                                                {months.map(m => <option key={m} value={m}>{m}</option>)}
+                                            </select>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
@@ -848,13 +1027,35 @@ export default function Dashboard({ role = 'user' }) {
                                 <select className="filter-select" value={selectedYearStart} onChange={(e) => setSelectedYearStart(e.target.value)}>
                                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                                 </select>
-                                <span className="filter-label">-</span>
-                                <select className="filter-select" value={selectedYearEnd} onChange={(e) => setSelectedYearEnd(e.target.value)}>
-                                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                                </select>
                             </div>
                         </div>
                     </header>
+
+                    {/* Running Text */}
+                    {runningText && (
+                        <div style={{
+                            background: 'var(--popover-bg)',
+                            color: 'var(--accent)',
+                            padding: '8px 16px',
+                            margin: '0 0 24px 0',
+                            borderRadius: '8px',
+                            border: '1px solid var(--card-border)',
+                            fontWeight: '500',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
+                        }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <marquee behavior="scroll" direction="left" style={{ flex: 1, fontSize: '14px' }}>
+                                {runningText}
+                            </marquee>
+                        </div>
+                    )}
 
                     {/* KPI Cards Area */}
                     <KpiCards data={kpiData} loading={kpiLoading} />
@@ -863,9 +1064,9 @@ export default function Dashboard({ role = 'user' }) {
                     <MonthlyTrendChart
                         filterType={filterType}
                         selectedYearStart={selectedYearStart}
-                        selectedYearEnd={selectedYearEnd}
+                        selectedYearEnd={selectedYearStart}
                         selectedMonthStart={selectedMonthStart}
-                        selectedMonthEnd={selectedMonthEnd}
+                        selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                         selectedDayStart={selectedDayStart}
                         selectedDayEnd={selectedDayEnd}
                         selectedFundCenter={selectedFundCenter}
@@ -875,14 +1076,14 @@ export default function Dashboard({ role = 'user' }) {
                     <div className="charts-grid-two" style={{ marginTop: '24px' }}>
 
                         {/* Dynamic Bar Chart Component */}
-                        <PercentageChart
-                            defaultTitle="Persentase Beban Gaji dan Upah"
+                        <NominalChart
+                            defaultTitle="Budget vs Actual (Beban Gaji dan Upah)"
                             defaultCategory="gaji"
                             filterType={filterType}
                             selectedYearStart={selectedYearStart}
-                            selectedYearEnd={selectedYearEnd}
+                            selectedYearEnd={selectedYearStart}
                             selectedMonthStart={selectedMonthStart}
-                            selectedMonthEnd={selectedMonthEnd}
+                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                             selectedDayStart={selectedDayStart}
                             selectedDayEnd={selectedDayEnd}
                             planColor="#3b82f6"
@@ -895,9 +1096,9 @@ export default function Dashboard({ role = 'user' }) {
                         <CostCompositionChart
                             filterType={filterType}
                             selectedYearStart={selectedYearStart}
-                            selectedYearEnd={selectedYearEnd}
+                            selectedYearEnd={selectedYearStart}
                             selectedMonthStart={selectedMonthStart}
-                            selectedMonthEnd={selectedMonthEnd}
+                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                             selectedDayStart={selectedDayStart}
                             selectedDayEnd={selectedDayEnd}
                             selectedFundCenter={selectedFundCenter}
@@ -909,14 +1110,17 @@ export default function Dashboard({ role = 'user' }) {
                     <TopVarianceChart
                         filterType={filterType}
                         selectedYearStart={selectedYearStart}
-                        selectedYearEnd={selectedYearEnd}
+                        selectedYearEnd={selectedYearStart}
                         selectedMonthStart={selectedMonthStart}
-                        selectedMonthEnd={selectedMonthEnd}
+                        selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                         selectedDayStart={selectedDayStart}
                         selectedDayEnd={selectedDayEnd}
                         selectedFundCenter={selectedFundCenter}
                         onBarClick={handleBarClick}
                     />
+
+                    {/* Summary Cost vs Actual Table */}
+                    <SummaryTable data={summaryData} loading={summaryLoading} />
 
                 </main>
             </div>
@@ -941,31 +1145,31 @@ export default function Dashboard({ role = 'user' }) {
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
                 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-                .dashboard-wrap { display: flex; min-height: 100vh; background: #0a0a0f; font-family: 'Inter', sans-serif; color: #e2e8f0; }
+                .dashboard-wrap { display: flex; min-height: 100vh; background: transparent; font-family: 'Inter', sans-serif; color: var(--text-primary); }
                 .main-content { flex: 1; overflow: auto; padding: 0 40px 40px; max-width: 1600px; margin: 0 auto; }
                 
                 .topbar { display: flex; align-items: center; justify-content: space-between; padding: 30px 0; margin-bottom: 20px; flex-wrap: wrap; gap: 20px; }
-                .page-title { font-size: 24px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.5px; white-space: nowrap; }
-                .page-subtitle { font-size: 14px; color: #94a3b8; margin-top: 6px; }
-                .page-subtitle strong { color: #f8fafc; }
+                .page-title { font-size: 24px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; white-space: nowrap; }
+                .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+                .page-subtitle strong { color: var(--text-primary); }
 
                 .global-filters { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; justify-content: flex-end; flex: 1; }
-                .filter-group { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.02); padding: 4px 8px 4px 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+                .filter-group { display: flex; align-items: center; gap: 8px; background: var(--card-bg); padding: 4px 8px 4px 12px; border-radius: 12px; border: 1px solid var(--card-border); }
                 .filter-label { font-size: 13px; font-weight: 600; color: #64748b; }
                 
-                .filter-select { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 500; outline: none; font-family: 'Inter', sans-serif; cursor: pointer; transition: border-color 0.2s; }
+                .filter-select { background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-primary); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 500; outline: none; font-family: 'Inter', sans-serif; cursor: pointer; transition: border-color 0.2s; }
                 .filter-select:focus, .filter-select:hover { border-color: #3b82f6; background: rgba(255,255,255,0.06); }
-                .filter-select option { background: #0f172a; color: #f1f5f9; }
+                .filter-select option { background: var(--popover-bg); color: var(--text-primary); }
                 .logout-btn:hover { background: rgba(239,68,68,0.2); color: #f87171; }
 
                 /* KPI CARDS */
                 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 10px; }
-                .kpi-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; }
-                .kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #94a3b8; }
-                .kpi-icon { display: flex; align-items: center; justify-content: center; color: #cbd5e1; }
+                .kpi-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; }
+                .kpi-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--text-muted); }
+                .kpi-icon { display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
                 .kpi-icon svg { width: 16px; height: 16px; }
                 .kpi-title { font-size: 13px; font-weight: 600; }
-                .kpi-value { font-size: 24px; font-weight: 700; color: #f1f5f9; margin-bottom: 12px; letter-spacing: -0.5px; }
+                .kpi-value { font-size: 24px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; letter-spacing: -0.5px; }
                 .kpi-footer { display: flex; flex-direction: column; gap: 6px; }
                 .kpi-trend { font-size: 12px; font-weight: 500; }
                 .kpi-progress-bg { width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
@@ -980,8 +1184,8 @@ export default function Dashboard({ role = 'user' }) {
                 }
 
                 .chart-card {
-                    background: rgba(255,255,255,0.02);
-                    border: 1px solid rgba(255,255,255,0.05);
+                    background: var(--card-bg);
+                    border: 1px solid var(--card-border);
                     border-radius: 20px;
                     padding: 30px;
                     display: flex;
@@ -990,7 +1194,7 @@ export default function Dashboard({ role = 'user' }) {
                 .flex-center { justify-content: center; align-items: center; min-height: 400px; }
 
                 .chart-header-small { text-align: center; margin-bottom: 24px; }
-                .section-title-small { font-size: 18px; font-weight: 700; color: #f1f5f9; }
+                .section-title-small { font-size: 18px; font-weight: 700; color: var(--text-primary); }
                 
                 .chart-container-small { flex: 1; width: 100%; min-height: 350px; display: flex; align-items: center; justify-content: center; }
                 
@@ -1001,20 +1205,20 @@ export default function Dashboard({ role = 'user' }) {
                 /* COST COMPOSITION STYLES */
                 .donut-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
                 .donut-title-wrap { display: flex; align-items: center; gap: 10px; }
-                .donut-title { font-size: 20px; font-weight: 700; color: #f1f5f9; }
+                .donut-title { font-size: 20px; font-weight: 700; color: var(--text-primary); }
                 .donut-badge { background: rgba(245,158,11,0.1); color: #f59e0b; padding: 6px 12px; border-radius: 20px; font-weight: 700; font-size: 13px; border: 1px solid rgba(245,158,11,0.2); }
                 
                 .donut-legend-top { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; justify-content: center; }
                 .legend-item { display: flex; align-items: center; gap: 6px; }
                 .legend-color { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-                .legend-text { font-size: 13px; font-weight: 600; color: #94a3b8; }
+                .legend-text { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
                 .donut-chart-wrap { position: relative; margin-bottom: 20px; }
 
-                .donut-details { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; }
-                .detail-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+                .donut-details { display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--card-border); padding-top: 20px; }
+                .detail-row { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--card-border); }
                 .detail-row:last-child { border-bottom: none; padding-bottom: 0; }
-                .detail-name { font-size: 14px; font-weight: 600; color: #cbd5e1; }
+                .detail-name { font-size: 14px; font-weight: 600; color: var(--text-muted); }
                 .detail-values { display: flex; align-items: center; gap: 16px; }
                 .detail-val { font-size: 14px; font-weight: 700; }
                 .detail-trend { font-size: 13px; font-weight: 700; }
