@@ -5,7 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 
-export default function UserProfile() {
+export default function UserProfile({ jabatan, departemen }) {
     const { auth, flash } = usePage().props;
     const user = auth?.user;
     const fileInputRef = useRef(null);
@@ -15,12 +15,7 @@ export default function UserProfile() {
         avatar: null,
     });
 
-    // Form for Profile Info
-    const infoForm = useForm({
-        name: user?.name || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-    });
+    // Form for Profile Info (Removed as it's now read-only)
 
     // Form for Password Update
     const passwordForm = useForm({
@@ -28,16 +23,6 @@ export default function UserProfile() {
         password: '',
         password_confirmation: '',
     });
-
-    // Handle Profile Info Update
-    const updateInfo = (e) => {
-        e.preventDefault();
-        infoForm.patch(route('dashboard.profile.info'), {
-            preserveScroll: true,
-        });
-    };
-
-    // Handle Avatar Selection
     const handleAvatarClick = () => {
         if (fileInputRef.current) {
             fileInputRef.current.click();
@@ -73,12 +58,7 @@ export default function UserProfile() {
         <DashboardLayout>
             <div className="profile-wrap min-h-screen">
                 <main className="main-content">
-                    <header className="topbar">
-                        <div>
-                            <h1 className="page-title">User Profile</h1>
-                            <p className="page-subtitle">Kelola informasi dan keamanan akun Anda</p>
-                        </div>
-                    </header>
+
 
                     {/* Flash Messages */}
                     {flash?.success && (
@@ -98,7 +78,7 @@ export default function UserProfile() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-8 lg:pt-12">
                         {/* Left Column: Profile Info & Avatar */}
                         <div className="lg:col-span-2 space-y-8">
                             <div className="profile-card">
@@ -145,78 +125,69 @@ export default function UserProfile() {
                                     </div>
                                 </div>
                                 
-                                <form onSubmit={updateInfo} className="mt-8">
+                                <div className="mt-8">
                                     <div className="profile-details">
                                         <div className="detail-group">
-                                            <label>Nama Lengkap</label>
-                                            <div className="detail-value !p-0 focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow">
-                                                <input
-                                                    type="text"
-                                                    value={infoForm.data.name}
-                                                    onChange={(e) => infoForm.setData('name', e.target.value)}
-                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none"
-                                                    required
-                                                />
-                                            </div>
-                                            {infoForm.errors.name && <p className="text-red-400 text-xs mt-1">{infoForm.errors.name}</p>}
-                                        </div>
-                                        
-                                        <div className="detail-group">
-                                            <label>Email Address</label>
-                                            <div className="detail-value !p-0 focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow">
-                                                <input
-                                                    type="email"
-                                                    value={infoForm.data.email}
-                                                    onChange={(e) => infoForm.setData('email', e.target.value)}
-                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none"
-                                                    required
-                                                />
-                                            </div>
-                                            {infoForm.errors.email && <p className="text-red-400 text-xs mt-1">{infoForm.errors.email}</p>}
-                                        </div>
-
-                                        <div className="detail-group">
-                                            <label>Nomor HP</label>
-                                            <div className="detail-value !p-0 focus-within:ring-2 focus-within:ring-indigo-500 transition-shadow">
-                                                <input
-                                                    type="text"
-                                                    value={infoForm.data.phone}
-                                                    onChange={(e) => infoForm.setData('phone', e.target.value)}
-                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none placeholder-gray-500"
-                                                    placeholder="Contoh: 08123456789"
-                                                />
-                                            </div>
-                                            {infoForm.errors.phone && <p className="text-red-400 text-xs mt-1">{infoForm.errors.phone}</p>}
-                                        </div>
-
-                                        <div className="detail-group">
                                             <label>NIK</label>
-                                            <div className="detail-value !p-0 opacity-70 cursor-not-allowed">
+                                            <div className="detail-value !p-0 opacity-80">
                                                 <input
                                                     type="text"
                                                     value={user?.nik || '-'}
                                                     readOnly
-                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-not-allowed"
+                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-default"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="detail-group">
+                                            <label>Nama Lengkap</label>
+                                            <div className="detail-value !p-0 opacity-80">
+                                                <input
+                                                    type="text"
+                                                    value={user?.name || '-'}
+                                                    readOnly
+                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-default"
                                                 />
                                             </div>
                                         </div>
                                         
                                         <div className="detail-group">
-                                            <label>Status Akun</label>
-                                            <div className="detail-value status-active">
-                                                <span className="status-dot"></span> Active
+                                            <label>Role</label>
+                                            <div className="detail-value !p-0 opacity-80">
+                                                <input
+                                                    type="text"
+                                                    value={user?.role ? user.role.toUpperCase() : 'USER'}
+                                                    readOnly
+                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-default"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="detail-group">
+                                            <label>Jabatan</label>
+                                            <div className="detail-value !p-0 opacity-80">
+                                                <input
+                                                    type="text"
+                                                    value={jabatan || '-'}
+                                                    readOnly
+                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-default"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="detail-group">
+                                            <label>Departemen</label>
+                                            <div className="detail-value !p-0 opacity-80">
+                                                <input
+                                                    type="text"
+                                                    value={departemen || '-'}
+                                                    readOnly
+                                                    className="w-full bg-transparent border-0 focus:ring-0 px-5 py-4 text-base font-semibold theme-text-primary outline-none cursor-default"
+                                                />
                                             </div>
                                         </div>
                                     </div>
-                                    
-                                    {infoForm.isDirty && (
-                                        <div className="mt-8 flex justify-end pt-4 border-t theme-border">
-                                            <PrimaryButton disabled={infoForm.processing} className="shadow-lg shadow-indigo-500/20 h-11 px-6">
-                                                {infoForm.processing ? 'Menyimpan...' : 'Simpan Perubahan'}
-                                            </PrimaryButton>
-                                        </div>
-                                    )}
-                                </form>
+                                </div>
                             </div>
                         </div>
 

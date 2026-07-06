@@ -662,7 +662,7 @@ const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, sele
 };
 
 // New KPI Cards Component
-const KpiCards = ({ data, loading }) => {
+const KpiCards = ({ data, loading, permissions = [] }) => {
     if (loading || !data) {
         return (
             <div className="kpi-grid">
@@ -682,7 +682,8 @@ const KpiCards = ({ data, loading }) => {
             value: "-",
             trendText: "No data",
             trendColor: "#94a3b8",
-            barColor: "#10b981" // green
+            barColor: "#10b981", // green
+            permission: "dashboard.kpi.revenue"
         },
         {
             title: "Total Cost",
@@ -690,7 +691,8 @@ const KpiCards = ({ data, loading }) => {
             value: formatCurrency(data.total_cost),
             trendText: "All Cluster (Induk)",
             trendColor: "#94a3b8",
-            barColor: "#ef4444" // red
+            barColor: "#ef4444", // red
+            permission: "dashboard.kpi.total_cost"
         },
         {
             title: "Total COGS",
@@ -698,7 +700,8 @@ const KpiCards = ({ data, loading }) => {
             value: formatCurrency(data.total_cogs),
             trendText: data.cogs_margin !== null ? `Margin ${data.cogs_margin}%` : "Margin N/A",
             trendColor: "#94a3b8",
-            barColor: "#3b82f6" // blue
+            barColor: "#3b82f6", // blue
+            permission: "dashboard.kpi.total_cogs"
         },
         {
             title: "EBITDA",
@@ -706,13 +709,20 @@ const KpiCards = ({ data, loading }) => {
             value: "-",
             trendText: data.ebitda_margin !== null ? `Margin ${data.ebitda_margin}%` : "Margin N/A",
             trendColor: "#94a3b8",
-            barColor: "#f59e0b" // orange
+            barColor: "#f59e0b", // orange
+            permission: "dashboard.kpi.ebitda"
         }
     ];
 
+    const visibleCards = cards.filter(c => permissions.includes(c.permission));
+
+    if (visibleCards.length === 0) {
+        return null;
+    }
+
     return (
         <div className="kpi-grid">
-            {cards.map((card, idx) => (
+            {visibleCards.map((card, idx) => (
                 <div key={idx} className="kpi-card">
                     <div className="kpi-header">
                         <span className="kpi-icon">{card.icon}</span>
@@ -769,9 +779,16 @@ const SummaryTable = ({ data, loading }) => {
                                 </tr>
                                 <tr>
                                     <td className="sticky-col-2">Actual</td>
-                                    {data.columns.map((col, cIdx) => (
-                                        <td key={`act-${cIdx}`}>{formatCurrency(row.Actual[col] || 0)}</td>
-                                    ))}
+                                    {data.columns.map((col, cIdx) => {
+                                        const planVal = row.Plan[col] || 0;
+                                        const actualVal = row.Actual[col] || 0;
+                                        const isOver = actualVal > planVal;
+                                        return (
+                                            <td key={`act-${cIdx}`} style={isOver ? { color: '#ef4444', fontWeight: '600' } : {}}>
+                                                {formatCurrency(actualVal)}
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             </Fragment>
                         ))}
@@ -780,13 +797,14 @@ const SummaryTable = ({ data, loading }) => {
             </div>
             <style>{`
                 .summary-table-container { margin-top: 24px; }
-                .summary-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-                .summary-table th, .summary-table td { border: 1px solid var(--card-border); padding: 10px 16px; white-space: nowrap; }
-                .summary-table thead th { background: var(--solid-card-bg); color: var(--text-primary); font-weight: 600; position: sticky; top: 0; z-index: 10; }
-                .summary-table tbody tr:hover { background: var(--popover-bg); }
-                .summary-table tbody td { color: var(--text-secondary); }
-                .summary-table .sticky-col { position: sticky; left: 0; background: var(--solid-card-bg); z-index: 5; font-weight: 600; color: var(--text-primary); border-right: 1px solid var(--card-border); }
-                .summary-table .sticky-col-2 { position: sticky; left: 200px; background: var(--solid-card-bg); z-index: 5; border-right: 1px solid var(--card-border); }
+                .summary-table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 13px; }
+                .summary-table th, .summary-table td { border-bottom: 1px solid var(--card-border); border-right: 1px solid var(--card-border); padding: 10px 16px; white-space: nowrap; }
+                .summary-table thead th { background: var(--solid-card-bg); color: var(--text-primary); font-weight: 600; position: sticky; top: 0; z-index: 10; border-top: 1px solid var(--card-border); }
+                .summary-table tbody tr:hover td { background: var(--popover-bg); }
+                .summary-table tbody td { color: var(--text-secondary); background: var(--solid-card-bg); }
+                .summary-table .sticky-col { position: sticky; left: 0; z-index: 12; font-weight: 600; color: var(--text-primary); min-width: 280px; max-width: 280px; white-space: normal; background: var(--solid-card-bg); border-left: 1px solid var(--card-border); }
+                .summary-table .sticky-col-2 { position: sticky; left: 280px; z-index: 12; min-width: 100px; max-width: 100px; background: var(--solid-card-bg); }
+                .summary-table thead .sticky-col, .summary-table thead .sticky-col-2 { z-index: 20; } /* Higher than normal th z-index 10 */
                 .summary-table tbody tr:hover .sticky-col, .summary-table tbody tr:hover .sticky-col-2 { background: var(--popover-bg); }
                 .fw-bold { font-weight: 600; }
             `}</style>
@@ -1056,71 +1074,80 @@ export default function Dashboard({ role = 'user' }) {
                             </marquee>
                         </div>
                     )}
-
+                    
                     {/* KPI Cards Area */}
-                    <KpiCards data={kpiData} loading={kpiLoading} />
+                    <KpiCards data={kpiData} loading={kpiLoading} permissions={auth?.permissions || []} />
 
                     {/* Monthly Trend Chart */}
-                    <MonthlyTrendChart
-                        filterType={filterType}
-                        selectedYearStart={selectedYearStart}
-                        selectedYearEnd={selectedYearStart}
-                        selectedMonthStart={selectedMonthStart}
-                        selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
-                        selectedDayStart={selectedDayStart}
-                        selectedDayEnd={selectedDayEnd}
-                        selectedFundCenter={selectedFundCenter}
-                    />
+                    {(auth?.permissions || []).includes('dashboard.chart.monthly_trend') && (
+                        <MonthlyTrendChart
+                            filterType={filterType}
+                            selectedYearStart={selectedYearStart}
+                            selectedYearEnd={selectedYearStart}
+                            selectedMonthStart={selectedMonthStart}
+                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
+                            selectedDayStart={selectedDayStart}
+                            selectedDayEnd={selectedDayEnd}
+                            selectedFundCenter={selectedFundCenter}
+                        />
+                    )}
 
                     {/* Dashboard Layout: 2 Columns */}
                     <div className="charts-grid-two" style={{ marginTop: '24px' }}>
 
                         {/* Dynamic Bar Chart Component */}
-                        <NominalChart
-                            defaultTitle="Budget vs Actual (Beban Gaji dan Upah)"
-                            defaultCategory="gaji"
-                            filterType={filterType}
-                            selectedYearStart={selectedYearStart}
-                            selectedYearEnd={selectedYearStart}
-                            selectedMonthStart={selectedMonthStart}
-                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
-                            selectedDayStart={selectedDayStart}
-                            selectedDayEnd={selectedDayEnd}
-                            planColor="#3b82f6"
-                            actualColor="#f97316"
-                            commitmentItems={commitmentItems}
-                            selectedFundCenter={selectedFundCenter}
-                        />
+                        {(auth?.permissions || []).includes('dashboard.chart.budget_vs_actual') && (
+                            <NominalChart
+                                defaultTitle="Budget vs Actual (Beban Gaji dan Upah)"
+                                defaultCategory="gaji"
+                                filterType={filterType}
+                                selectedYearStart={selectedYearStart}
+                                selectedYearEnd={selectedYearStart}
+                                selectedMonthStart={selectedMonthStart}
+                                selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
+                                selectedDayStart={selectedDayStart}
+                                selectedDayEnd={selectedDayEnd}
+                                planColor="#3b82f6"
+                                actualColor="#f97316"
+                                commitmentItems={commitmentItems}
+                                selectedFundCenter={selectedFundCenter}
+                            />
+                        )}
 
                         {/* New Cost Composition Donut Chart */}
-                        <CostCompositionChart
-                            filterType={filterType}
-                            selectedYearStart={selectedYearStart}
-                            selectedYearEnd={selectedYearStart}
-                            selectedMonthStart={selectedMonthStart}
-                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
-                            selectedDayStart={selectedDayStart}
-                            selectedDayEnd={selectedDayEnd}
-                            selectedFundCenter={selectedFundCenter}
-                        />
-
+                        {(auth?.permissions || []).includes('dashboard.chart.cost_composition') && (
+                            <CostCompositionChart
+                                filterType={filterType}
+                                selectedYearStart={selectedYearStart}
+                                selectedYearEnd={selectedYearStart}
+                                selectedMonthStart={selectedMonthStart}
+                                selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
+                                selectedDayStart={selectedDayStart}
+                                selectedDayEnd={selectedDayEnd}
+                                selectedFundCenter={selectedFundCenter}
+                            />
+                        )}
                     </div>
 
                     {/* Top 5 Variance Cost Chart (Full Width) */}
-                    <TopVarianceChart
-                        filterType={filterType}
-                        selectedYearStart={selectedYearStart}
-                        selectedYearEnd={selectedYearStart}
-                        selectedMonthStart={selectedMonthStart}
-                        selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
-                        selectedDayStart={selectedDayStart}
-                        selectedDayEnd={selectedDayEnd}
-                        selectedFundCenter={selectedFundCenter}
-                        onBarClick={handleBarClick}
-                    />
+                    {(auth?.permissions || []).includes('dashboard.chart.top_5_variance') && (
+                        <TopVarianceChart
+                            filterType={filterType}
+                            selectedYearStart={selectedYearStart}
+                            selectedYearEnd={selectedYearStart}
+                            selectedMonthStart={selectedMonthStart}
+                            selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
+                            selectedDayStart={selectedDayStart}
+                            selectedDayEnd={selectedDayEnd}
+                            selectedFundCenter={selectedFundCenter}
+                            onBarClick={handleBarClick}
+                        />
+                    )}
 
                     {/* Summary Cost vs Actual Table */}
-                    <SummaryTable data={summaryData} loading={summaryLoading} />
+                    {(auth?.permissions || []).includes('dashboard.table.summary') && (
+                        <SummaryTable data={summaryData} loading={summaryLoading} />
+                    )}
 
                 </main>
             </div>
@@ -1153,7 +1180,7 @@ export default function Dashboard({ role = 'user' }) {
                 .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
                 .page-subtitle strong { color: var(--text-primary); }
 
-                .global-filters { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; justify-content: flex-end; flex: 1; }
+                .global-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; flex: 1; }
                 .filter-group { display: flex; align-items: center; gap: 8px; background: var(--card-bg); padding: 4px 8px 4px 12px; border-radius: 12px; border: 1px solid var(--card-border); }
                 .filter-label { font-size: 13px; font-weight: 600; color: #64748b; }
                 

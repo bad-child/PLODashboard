@@ -18,7 +18,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
 // ─── Manajemen Pengguna (Protected by Permission) ─────────────────────────────
 Route::middleware(['auth', 'permission:admin.users.index'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users', function () {
+        return app(\App\Http\Controllers\AdminUserController::class)->index();
+    })->name('users.index');
+    Route::get('/users/search-karyawan', [\App\Http\Controllers\AdminUserController::class, 'searchKaryawan'])->name('users.search_karyawan');
     Route::post('/users', [\App\Http\Controllers\AdminUserController::class, 'store'])->name('users.store');
     Route::delete('/users/{user}', [\App\Http\Controllers\AdminUserController::class, 'destroy'])->name('users.destroy');
     Route::post('/users/{user}/reset-password', [\App\Http\Controllers\AdminUserController::class, 'resetPassword'])->name('users.reset_password');
@@ -33,27 +36,24 @@ Route::middleware(['auth', 'permission:admin.settings'])->prefix('admin')->name(
         return Inertia::render('Admin/Settings', [
             'runningText' => $setting ? $setting->value : '',
             'themeMode' => $themeSetting ? $themeSetting->value : 'dark',
-            'rolePermissions' => $permissionsSetting && $permissionsSetting->value ? json_decode($permissionsSetting->value, true) : []
+            'rolePermissions' => $permissionsSetting && $permissionsSetting->value ? json_decode($permissionsSetting->value, true) : [],
+            'customRoles' => \App\Models\User::getCustomRoles(),
+            'availableRoles' => \App\Models\User::getAvailableRoles(),
+            'customFeatures' => \App\Models\User::getCustomFeatures(),
+            'availableFeatures' => \App\Models\User::getAvailableFeatures(),
+            'appFeaturesDictionary' => \App\Models\User::getAppFeaturesDictionary()
         ]);
     })->name('settings');
     Route::post('/settings/running-text', [\App\Http\Controllers\AdminUserController::class, 'updateRunningText'])->name('settings.running_text.update');
     Route::post('/settings/theme', [\App\Http\Controllers\AdminUserController::class, 'updateTheme'])->name('settings.theme.update');
     Route::post('/settings/permissions', [\App\Http\Controllers\AdminUserController::class, 'updateMenuPermissions'])->name('settings.permissions.update');
+    Route::post('/settings/roles', [\App\Http\Controllers\AdminUserController::class, 'storeRole'])->name('settings.roles.store');
+    Route::delete('/settings/roles/{role}', [\App\Http\Controllers\AdminUserController::class, 'destroyRole'])->name('settings.roles.destroy');
+    Route::post('/settings/features', [\App\Http\Controllers\AdminUserController::class, 'storeFeature'])->name('settings.features.store');
+    Route::delete('/settings/features/{feature}', [\App\Http\Controllers\AdminUserController::class, 'destroyFeature'])->name('settings.features.destroy');
 });
 
-// ─── IT Dashboard ─────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:it'])->prefix('it')->name('it.')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard/ITDashboard');
-    })->name('dashboard');
-});
 
-// ─── CC Dashboard ─────────────────────────────────────────────────────────────
-Route::middleware(['auth', 'role:cc'])->prefix('cc')->name('cc.')->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard/CCDashboard');
-    })->name('dashboard');
-});
 
 // ─── User Dashboard ───────────────────────────────────────────────────────────
 Route::middleware(['auth'])->prefix('user')->name('user.')->group(function () {
@@ -70,7 +70,26 @@ Route::middleware('auth')->group(function () {
     
     // Custom Dashboard Profile Page
     Route::get('/dashboard/profile', function () {
-        return Inertia::render('Dashboard/UserProfile');
+        $user = auth()->user();
+        
+        $hrdInfo = null;
+        if ($user && $user->nik) {
+            try {
+                $hrdInfo = \Illuminate\Support\Facades\DB::table('HRD.dbo.TKaryawan as k')
+                    ->leftJoin('HRD.dbo.TJabatan as j', 'k.KodeJB', '=', 'j.KodeJB')
+                    ->leftJoin('HRD.dbo.tdepartement as d', 'k.KodeDP', '=', 'd.KodeDP')
+                    ->where('k.NIK', $user->nik)
+                    ->select('j.Nama as jabatan', 'd.Nama as departemen')
+                    ->first();
+            } catch (\Exception $e) {
+                // Ignore DB error
+            }
+        }
+
+        return Inertia::render('Dashboard/UserProfile', [
+            'jabatan' => $hrdInfo ? $hrdInfo->jabatan : '-',
+            'departemen' => $hrdInfo ? $hrdInfo->departemen : '-',
+        ]);
     })->name('dashboard.profile');
     Route::post('/dashboard/profile/avatar', [\App\Http\Controllers\DashboardProfileController::class, 'updateAvatar'])->name('dashboard.profile.avatar');
     Route::post('/dashboard/profile/password', [\App\Http\Controllers\DashboardProfileController::class, 'updatePassword'])->name('dashboard.profile.password');

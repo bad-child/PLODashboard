@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import React from 'react';
+import Dropdown from '@/Components/Dropdown';
 
 export default function DashboardLayout({ children }) {
     const { auth, theme } = usePage().props;
@@ -39,20 +40,11 @@ export default function DashboardLayout({ children }) {
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         </Link>
 
-                        {auth?.permissions?.includes('admin.users.index') && (
-                            <Link
-                                href={route('admin.users.index')}
-                                className={`nav-icon ${route().current('admin.users.*') ? 'active' : ''}`}
-                                title="Manajemen Pengguna"
-                            >
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                            </Link>
-                        )}
                         
-                        {auth?.permissions?.includes('admin.settings') && (
-                            <Link
-                                href={route('admin.settings')}
-                                className={`nav-icon ${route().current('admin.settings') ? 'active' : ''}`}
+                        {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.some(p => p.startsWith('config.settings.'))) && (
+                            <Link 
+                                href={route('admin.settings')} 
+                                className={`sidebar-icon ${route().current('admin.settings') ? 'active' : ''}`}
                                 title="Pengaturan Sistem"
                             >
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -85,7 +77,90 @@ export default function DashboardLayout({ children }) {
 
             {/* Main Content Area */}
             <div className="main-wrapper">
-                {children}
+                {/* Top Navigation Bar - Hidden on Dashboard and Profile */}
+                {(!route().current('*dashboard*') && !route().current('*profile*')) && (
+                    <header className="top-navbar theme-bg-card theme-border border-b px-6 py-4 flex items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-80">
+                        <div className="flex items-center gap-6">
+                            {(auth?.permissions?.includes('admin.users.index') || auth?.permissions?.includes('admin.settings') || auth?.permissions?.some(p => p.startsWith('config.settings.'))) && (
+                                <Dropdown>
+                                    <Dropdown.Trigger>
+                                        <button className="flex items-center gap-2 px-4 py-2 rounded-xl theme-bg-input theme-border border hover:bg-[var(--accent)] hover:text-white transition-colors">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                            <span className="font-semibold">Config</span>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                    </Dropdown.Trigger>
+                                    
+                                    <Dropdown.Content align="left" contentClasses="py-2 bg-[var(--popover-bg)] border border-[var(--card-border)] text-[var(--text-primary)] shadow-2xl rounded-xl min-w-[240px] mt-2">
+                                    
+                                    {auth?.permissions?.includes('admin.users.index') && (
+                                        <div className="relative group">
+                                            <Link href={route('admin.users.index')} className="block text-black hover:bg-gray-100 hover:text-blue-600 rounded-lg mx-2 my-1 flex items-center justify-between gap-3 px-4 py-3 font-semibold transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                                    Manajemen Pengguna
+                                                </div>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                            </Link>
+                                            
+                                            {/* Submenu Users */}
+                                            <div className="absolute left-full top-0 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-xl shadow-2xl py-2 z-50">
+                                                <Link href={route('admin.users.index')} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Tambah Pengguna Baru</Link>
+                                                <Link href={route('admin.users.index')} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Edit Pengguna</Link>
+                                                <Link href={route('admin.users.index')} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Hapus Pengguna</Link>
+                                                <Link href={route('admin.users.index')} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Reset Password</Link>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Pengaturan Sistem */}
+                                    {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.some(p => p.startsWith('config.settings.'))) && (
+                                        <div className="relative group">
+                                            <Link href={route('admin.settings')} className="block text-black hover:bg-gray-100 hover:text-blue-600 rounded-lg mx-2 my-1 flex items-center justify-between gap-3 px-4 py-3 font-semibold transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                                    Pengaturan Sistem
+                                                </div>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                            </Link>
+                                            
+                                            {/* Submenu Settings */}
+                                            <div className="absolute left-full top-0 hidden group-hover:block w-56 bg-white border border-gray-200 rounded-xl shadow-2xl py-2 z-50">
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.theme')) && (
+                                                    <Link href={route('admin.settings') + '?feature=theme'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Ubah Tema</Link>
+                                                )}
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.running_text')) && (
+                                                    <Link href={route('admin.settings') + '?feature=running_text'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Ubah Teks Berjalan</Link>
+                                                )}
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.roles')) && (
+                                                    <Link href={route('admin.settings') + '?feature=roles'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Manajemen Role</Link>
+                                                )}
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.features')) && (
+                                                    <Link href={route('admin.settings') + '?feature=features'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Manajemen Fitur</Link>
+                                                )}
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.permissions')) && (
+                                                    <Link href={route('admin.settings') + '?feature=permissions'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Konfigurasi Akses Menu</Link>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                    </Dropdown.Content>
+                                </Dropdown>
+                            )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm theme-text-muted hidden sm:inline-block">Halo, {user?.name}</span>
+                            <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                                {user?.name?.charAt(0) || 'U'}
+                            </div>
+                        </div>
+                    </header>
+                )}
+
+                <main className="flex-1 p-0">
+                    {children}
+                </main>
             </div>
 
             <style>{`
@@ -269,6 +344,9 @@ export default function DashboardLayout({ children }) {
 
                 .main-wrapper {
                     flex: 1;
+                    min-width: 0; /* Prevents flex item from expanding past viewport */
+                    width: 100%;
+                    overflow-x: hidden; /* Hide body horizontal scroll */
                     margin-left: var(--sidebar-width);
                     min-height: 100vh;
                     display: flex;

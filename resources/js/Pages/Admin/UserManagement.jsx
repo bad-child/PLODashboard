@@ -1,17 +1,19 @@
 import { Head, useForm, usePage, router } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
 
-export default function UserManagement({ users }) {
+export default function UserManagement({ users, availableRoles = {} }) {
     const { flash } = usePage().props;
     const [isModalOpen, setIsModalOpen] = useState(false);
     
     const { data, setData, post, processing, errors, reset, clearErrors } = useForm({
         name: '',
         nik: '',
+        jabatan: '',
         email: '',
         role: 'user',
         password: '',
@@ -31,7 +33,27 @@ export default function UserManagement({ users }) {
         setIsModalOpen(false);
         reset();
         clearErrors();
+        setQuery('');
+        setResults([]);
     };
+
+    // HRD API Search State
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+    
+    useEffect(() => {
+        if (query.length < 2) {
+            setResults([]);
+            return;
+        }
+        const timeout = setTimeout(() => {
+            axios.get(route('admin.users.search_karyawan') + '?q=' + query)
+                .then(res => setResults(res.data))
+                .catch(err => console.error(err));
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [query]);
 
     const handleDelete = (id) => {
         if (confirm('Apakah Anda yakin ingin menghapus akun ini secara permanen?')) {
@@ -116,7 +138,7 @@ export default function UserManagement({ users }) {
                                                 user.role === 'cc' ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' :
                                                 'bg-blue-500/10 border-blue-500/30 text-blue-400'
                                             }`}>
-                                                {user.role.toUpperCase()}
+                                                {(availableRoles[user.role] || user.role).toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="px-8 py-6">
@@ -185,45 +207,75 @@ export default function UserManagement({ users }) {
 
                             <form onSubmit={submit} className="space-y-4">
                                 <div>
-                                    <InputLabel htmlFor="name" value="Nama Lengkap" className="theme-text-primary" />
+                                    <InputLabel htmlFor="name" value="Nama Lengkap (Otomatis dari HRD)" className="theme-text-primary" />
                                     <TextInput
                                         id="name"
                                         type="text"
                                         name="name"
                                         value={data.name}
-                                        className="mt-1 block w-full theme-bg-input theme-border theme-text-primary placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500"
+                                        className="mt-1 block w-full theme-bg-input theme-border theme-text-primary placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500 opacity-60 cursor-not-allowed"
                                         onChange={(e) => setData('name', e.target.value)}
                                         required
+                                        readOnly
                                     />
                                     {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                                 </div>
 
-                                <div>
-                                    <InputLabel htmlFor="nik" value="NIK" className="theme-text-primary" />
+                                <div className="relative">
+                                    <InputLabel htmlFor="nik" value="NIK Karyawan" className="theme-text-primary" />
                                     <TextInput
                                         id="nik"
                                         type="text"
                                         name="nik"
                                         value={data.nik}
                                         className="mt-1 block w-full theme-bg-input theme-border theme-text-primary placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500"
-                                        onChange={(e) => setData('nik', e.target.value)}
+                                        onChange={(e) => {
+                                            setData('nik', e.target.value);
+                                            setQuery(e.target.value);
+                                            setShowDropdown(true);
+                                        }}
+                                        onFocus={() => setShowDropdown(true)}
+                                        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
                                         required
+                                        placeholder="Ketik NIK atau Nama..."
+                                        autoComplete="off"
                                     />
+                                    {showDropdown && results.length > 0 && (
+                                        <ul className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-xl theme-bg-card border theme-border py-1 text-base shadow-2xl focus:outline-none sm:text-sm">
+                                            {results.map(r => (
+                                                <li
+                                                    key={r.NIK}
+                                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 theme-text-primary hover:bg-indigo-500/20 transition-colors"
+                                                    onClick={() => {
+                                                        setData(prev => ({
+                                                            ...prev,
+                                                            nik: r.NIK,
+                                                            name: r.Nama,
+                                                            jabatan: r.Jabatan || '-',
+                                                            email: r.Email || `${r.NIK}@hrd.local`
+                                                        }));
+                                                        setShowDropdown(false);
+                                                    }}
+                                                >
+                                                    <span className="block truncate font-bold">{r.NIK}</span>
+                                                    <span className="block truncate theme-text-muted text-xs">{r.Nama}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                     {errors.nik && <p className="text-red-400 text-xs mt-1">{errors.nik}</p>}
                                 </div>
 
                                 <div>
-                                    <InputLabel htmlFor="email" value="Email Address" className="theme-text-primary" />
+                                    <InputLabel htmlFor="jabatan" value="Jabatan (Otomatis dari HRD)" className="theme-text-primary" />
                                     <TextInput
-                                        id="email"
-                                        type="email"
-                                        name="email"
-                                        value={data.email}
-                                        className="mt-1 block w-full theme-bg-input theme-border theme-text-primary placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500"
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        required
+                                        id="jabatan"
+                                        type="text"
+                                        name="jabatan"
+                                        value={data.jabatan}
+                                        className="mt-1 block w-full theme-bg-input theme-border theme-text-primary placeholder-gray-500 focus:border-indigo-500 focus:ring-indigo-500 opacity-60 cursor-not-allowed"
+                                        readOnly
                                     />
-                                    {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                                 </div>
 
                                 <div>
@@ -235,10 +287,9 @@ export default function UserManagement({ users }) {
                                         className="mt-1 block w-full theme-bg-input theme-border theme-text-primary rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                         onChange={(e) => setData('role', e.target.value)}
                                     >
-                                        <option value="user">User (Dashboard Standard)</option>
-                                        <option value="cc">Cost Control (CC Dashboard)</option>
-                                        <option value="it">IT (IT Dashboard)</option>
-                                        <option value="admin">Administrator</option>
+                                        {Object.entries(availableRoles).map(([slug, name]) => (
+                                            <option key={slug} value={slug}>{name}</option>
+                                        ))}
                                     </select>
                                     {errors.role && <p className="text-red-400 text-xs mt-1">{errors.role}</p>}
                                 </div>

@@ -45,7 +45,7 @@ class HandleInertiaRequests extends Middleware
         if ($user) {
             if ($user->isAdmin()) {
                 // Admin implicitly has all configured permissions
-                $userPermissions = ['admin.users.index', 'admin.settings'];
+                $userPermissions = array_keys(\App\Models\User::getAvailableFeatures());
             } else {
                 $userPermissions = $rolePermissions[$user->role] ?? [];
             }

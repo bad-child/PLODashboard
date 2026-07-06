@@ -34,8 +34,19 @@ class CheckMenuPermission
             $role = $user->role;
             
             // Permissions structure: [ 'it' => ['admin.users.index', 'admin.settings'], 'cc' => [...] ]
-            if (isset($permissions[$role]) && in_array($permission, $permissions[$role])) {
-                return $next($request);
+            if (isset($permissions[$role])) {
+                if (in_array($permission, $permissions[$role])) {
+                    return $next($request);
+                }
+                
+                // Allow admin.settings if they have any config.settings.* permission
+                if ($permission === 'admin.settings') {
+                    foreach ($permissions[$role] as $p) {
+                        if (str_starts_with($p, 'config.settings.')) {
+                            return $next($request);
+                        }
+                    }
+                }
             }
         }
 
