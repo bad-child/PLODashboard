@@ -115,6 +115,22 @@ return [
             'login_timeout' => 300,
         ],
 
+        'sqlsrv_second' => [
+            'driver' => env('DB_CONNECTION_SECOND', 'sqlsrv'),
+            'url' => env('DB_URL_SECOND'),
+            'host' => env('DB_HOST_SECOND', 'localhost'),
+            'port' => env('DB_PORT_SECOND', '1433'),
+            'database' => env('DB_DATABASE_SECOND', 'laravel'),
+            'username' => env('DB_USERNAME_SECOND', 'root'),
+            'password' => env('DB_PASSWORD_SECOND', ''),
+            'charset' => env('DB_CHARSET_SECOND', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'encrypt' => env('DB_ENCRYPT_SECOND', 'yes'),
+            'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE_SECOND', 'true'),
+            'login_timeout' => 300,
+        ],
+
     ],
 
     /*

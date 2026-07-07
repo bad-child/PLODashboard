@@ -75,10 +75,11 @@ Route::middleware('auth')->group(function () {
         $hrdInfo = null;
         if ($user && $user->nik) {
             try {
-                $hrdInfo = \Illuminate\Support\Facades\DB::table('HRD.dbo.TKaryawan as k')
-                    ->leftJoin('HRD.dbo.TJabatan as j', 'k.KodeJB', '=', 'j.KodeJB')
-                    ->leftJoin('HRD.dbo.tdepartement as d', 'k.KodeDP', '=', 'd.KodeDP')
+                $hrdInfo = \Illuminate\Support\Facades\DB::connection('sqlsrv_second')->table('TKaryawan as k')
+                    ->leftJoin('TJabatan as j', 'k.KodeJB', '=', 'j.KodeJB')
+                    ->leftJoin('tdepartement as d', 'k.KodeDP', '=', 'd.KodeDP')
                     ->where('k.NIK', $user->nik)
+                    ->where('k.aktif', 0)
                     ->select('j.Nama as jabatan', 'd.Nama as departemen')
                     ->first();
             } catch (\Exception $e) {

@@ -97,11 +97,14 @@ class AdminUserController extends Controller
         }
 
         try {
-            $karyawans = \Illuminate\Support\Facades\DB::table('HRD.dbo.TKaryawan as k')
-                ->leftJoin('HRD.dbo.TJabatan as j', 'k.KodeJB', '=', 'j.KodeJB')
+            $karyawans = \Illuminate\Support\Facades\DB::connection('sqlsrv_second')->table('TKaryawan as k')
+                ->leftJoin('TJabatan as j', 'k.KodeJB', '=', 'j.KodeJB')
                 ->select('k.NIK', 'k.Nama', 'k.Email', 'j.Nama as Jabatan')
-                ->where('k.NIK', 'LIKE', "%{$query}%")
-                ->orWhere('k.Nama', 'LIKE', "%{$query}%")
+                ->where('k.aktif', 0)
+                ->where(function($q) use ($query) {
+                    $q->where('k.NIK', 'LIKE', "%{$query}%")
+                      ->orWhere('k.Nama', 'LIKE', "%{$query}%");
+                })
                 ->take(10)
                 ->get();
                 
