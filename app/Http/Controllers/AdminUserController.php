@@ -79,10 +79,10 @@ class AdminUserController extends Controller
     public function resetPassword(Request $request, User $user)
     {
         $user->update([
-            'password' => Hash::make('12345678') // Default password
+            'password' => Hash::make('1234Abcd##') // Default password
         ]);
 
-        return redirect()->back()->with('success', 'Password reset to 12345678');
+        return redirect()->back()->with('success', 'Password berhasil direset menjadi 1234Abcd##');
     }
 
     /**

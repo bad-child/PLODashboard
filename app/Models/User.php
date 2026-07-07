@@ -49,7 +49,7 @@ class User extends Authenticatable
     {
         return [
             'admin.users.index' => 'Manajemen Pengguna',
-            'admin.settings'    => 'Pengaturan Sistem',
+            'admin.settings' => 'Pengaturan Sistem',
         ];
     }
 
@@ -101,6 +101,7 @@ class User extends Authenticatable
                     'config.settings.roles' => 'Pengaturan Sistem - Manajemen Role',
                     'config.settings.features' => 'Pengaturan Sistem - Manajemen Fitur',
                     'config.settings.permissions' => 'Pengaturan Sistem - Konfigurasi Akses Menu',
+                    'config.settings.privacy_policy' => 'Pengaturan Sistem - Privacy Policy',
                 ]
             ]
         ];
@@ -109,7 +110,10 @@ class User extends Authenticatable
     /**
      * Role helper methods
      */
-    public function isAdmin(): bool  { return $this->role === self::ROLE_ADMIN; }
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN || $this->role === 'administrator';
+    }
 
     public function hasRole(string|array $roles): bool
     {
@@ -121,9 +125,9 @@ class User extends Authenticatable
      */
     public function getDashboardRoute(): string
     {
-        return match($this->role) {
+        return match ($this->role) {
             self::ROLE_ADMIN => 'admin.dashboard',
-            default          => 'user.dashboard',
+            default => 'user.dashboard',
         };
     }
 
@@ -153,8 +157,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password'          => 'hashed',
-            'last_login_at'     => 'datetime',
+            'password' => 'hashed',
+            'last_login_at' => 'datetime',
         ];
     }
 }

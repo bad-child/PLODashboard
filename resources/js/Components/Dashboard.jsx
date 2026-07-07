@@ -947,6 +947,8 @@ export default function Dashboard({ role = 'user' }) {
         fetchSummary();
     }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
 
+    const hasDashboardPermissions = (auth?.permissions || []).some(p => p.startsWith('dashboard.'));
+
     return (
         <DashboardLayout>
             <div className="dashboard-wrap">
@@ -1041,8 +1043,46 @@ export default function Dashboard({ role = 'user' }) {
                         </div>
                     )}
                     
+                    {!hasDashboardPermissions && (
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '80px 24px',
+                            background: 'var(--card-bg)',
+                            borderRadius: '16px',
+                            border: '1px solid var(--card-border)',
+                            marginTop: '24px',
+                            textAlign: 'center'
+                        }}>
+                            <div style={{ 
+                                width: '80px', 
+                                height: '80px', 
+                                borderRadius: '50%', 
+                                background: 'var(--popover-bg)', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                marginBottom: '24px'
+                            }}>
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                                </svg>
+                            </div>
+                            <h2 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Akses Dashboard Dibatasi</h2>
+                            <p style={{ color: 'var(--text-muted)', maxWidth: '400px', lineHeight: '1.6' }}>
+                                Role Anda saat ini tidak memiliki izin untuk melihat metrik dan grafik pada dashboard. Hubungi administrator jika Anda memerlukan akses ini.
+                            </p>
+                        </div>
+                    )}
+
                     {/* KPI Cards Area */}
-                    <KpiCards data={kpiData} loading={kpiLoading} permissions={auth?.permissions || []} />
+                    {hasDashboardPermissions && (
+                        <>
+                            <KpiCards data={kpiData} loading={kpiLoading} permissions={auth?.permissions || []} />
 
                     {/* Monthly Trend Chart */}
                     {(auth?.permissions || []).includes('dashboard.chart.monthly_trend') && (
@@ -1114,7 +1154,9 @@ export default function Dashboard({ role = 'user' }) {
                     {(auth?.permissions || []).includes('dashboard.table.summary') && (
                         <SummaryTable data={summaryData} loading={summaryLoading} />
                     )}
-
+                    
+                        </>
+                    )}
                 </main>
             </div>
 

@@ -6,11 +6,14 @@ export default function DashboardLayout({ children }) {
     const { auth, theme } = usePage().props;
     const user = auth?.user;
 
-    // Determine the base route prefix based on role for the dashboard link
     let dashboardRoute = route('user.dashboard');
-    if (user?.role === 'admin') dashboardRoute = route('admin.dashboard');
-    else if (user?.role === 'it') dashboardRoute = route('it.dashboard');
-    else if (user?.role === 'cc') dashboardRoute = route('cc.dashboard');
+    if (user?.role === 'admin') {
+        try {
+            dashboardRoute = route('admin.dashboard');
+        } catch (e) {
+            // fallback if route not found
+        }
+    }
 
     return (
         <div className="app-container" data-theme={theme || 'dark'}>

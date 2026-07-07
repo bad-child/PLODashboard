@@ -97,9 +97,9 @@ export default function Settings({ runningText, privacyPolicy, themeMode, rolePe
         }
     };
 
-    // Filter out admin, we only configure non-admin roles
+    // Filter out admin and administrator, we only configure non-admin roles
     const configurableRoles = Object.keys(availableRoles)
-        .filter(key => key !== 'admin')
+        .filter(key => key !== 'admin' && key !== 'administrator')
         .map(key => ({ id: key, label: availableRoles[key] }));
 
     const handleAddFeature = (e) => {
@@ -274,7 +274,9 @@ export default function Settings({ runningText, privacyPolicy, themeMode, rolePe
 
                             {Object.keys(customRoles).length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                    {Object.entries(customRoles).map(([slug, name]) => (
+                                    {Object.entries(customRoles)
+                                        .filter(([slug]) => slug !== 'administrator')
+                                        .map(([slug, name]) => (
                                         <div key={slug} className="flex items-center justify-between p-4 rounded-xl border theme-border theme-bg-input/50">
                                             <div>
                                                 <div className="font-semibold theme-text-primary">{name}</div>
@@ -399,15 +401,22 @@ export default function Settings({ runningText, privacyPolicy, themeMode, rolePe
                                                 </td>
                                                 {configurableRoles.map(role => {
                                                     const isChecked = (permissions[role.id] || []).includes(menu.id);
+                                                    
+                                                    // Hanya administrator yang bisa mengatur akses milik it dan administrator
+                                                    const isRestricted = user?.role !== 'admin' && user?.role !== 'administrator' && (role.id === 'it' || role.id === 'administrator' || role.id === 'admin');
+
                                                     return (
                                                         <td key={role.id} className="px-8 py-6 text-center">
-                                                            <label className="inline-flex items-center cursor-pointer group">
+                                                            <label className={`inline-flex items-center group ${isRestricted ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}>
                                                                 <div className="relative flex items-center justify-center">
                                                                     <input 
                                                                         type="checkbox" 
                                                                         checked={isChecked}
-                                                                        onChange={() => togglePermission(role.id, menu.id)}
-                                                                        className="peer appearance-none w-8 h-8 rounded-lg border-2 theme-border theme-bg-input checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all cursor-pointer"
+                                                                        disabled={isRestricted}
+                                                                        onChange={() => {
+                                                                            if (!isRestricted) togglePermission(role.id, menu.id);
+                                                                        }}
+                                                                        className={`peer appearance-none w-8 h-8 rounded-lg border-2 theme-border theme-bg-input checked:bg-blue-500 checked:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all ${isRestricted ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                                                     />
                                                                     <svg className="absolute w-5 h-5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

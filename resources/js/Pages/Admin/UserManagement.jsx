@@ -55,15 +55,21 @@ export default function UserManagement({ users, availableRoles = {} }) {
         return () => clearTimeout(timeout);
     }, [query]);
 
-    const handleDelete = (id) => {
+    const handleDelete = (nik) => {
         if (confirm('Apakah Anda yakin ingin menghapus akun ini secara permanen?')) {
-            router.delete(route('admin.users.destroy', id));
+            router.delete(route('admin.users.destroy', nik), {
+                preserveScroll: true,
+                onSuccess: () => alert('Berhasil! Akun telah dihapus secara permanen.')
+            });
         }
     };
 
-    const handleResetPassword = (id) => {
-        if (confirm('Apakah Anda yakin ingin mereset password akun ini menjadi "12345678"?')) {
-            router.post(route('admin.users.reset_password', id));
+    const handleResetPassword = (nik) => {
+        if (confirm('Apakah Anda yakin ingin mereset password akun ini menjadi "1234Abcd##"?')) {
+            router.post(route('admin.users.reset_password', nik), {}, {
+                preserveScroll: true,
+                onSuccess: () => alert('Berhasil! Password akun telah direset menjadi "1234Abcd##".')
+            });
         }
     };
 
@@ -154,16 +160,16 @@ export default function UserManagement({ users, availableRoles = {} }) {
                                         <td className="px-8 py-6 text-right">
                                             <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
-                                                    onClick={() => handleResetPassword(user.id)}
+                                                    onClick={() => handleResetPassword(user.nik)}
                                                     className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl hover:bg-amber-500/20 transition-colors"
-                                                    title="Reset Password ke 'password'"
+                                                    title="Reset Password ke '1234Abcd##'"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                                                     </svg>
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(user.id)}
+                                                    onClick={() => handleDelete(user.nik)}
                                                     className="p-2.5 bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500/20 transition-colors"
                                                     title="Hapus Akun"
                                                 >
@@ -287,7 +293,9 @@ export default function UserManagement({ users, availableRoles = {} }) {
                                         className="mt-1 block w-full theme-bg-input theme-border theme-text-primary rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                         onChange={(e) => setData('role', e.target.value)}
                                     >
-                                        {Object.entries(availableRoles).map(([slug, name]) => (
+                                        {Object.entries(availableRoles)
+                                            .filter(([slug]) => slug !== 'administrator' && slug !== 'admin')
+                                            .map(([slug, name]) => (
                                             <option key={slug} value={slug}>{name}</option>
                                         ))}
                                     </select>
