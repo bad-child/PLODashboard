@@ -954,41 +954,7 @@ export default function Dashboard({ role = 'user' }) {
                     <header className="topbar">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <h1 className="page-title">Profit & Loss Dashboard</h1>
-                            <button 
-                                onClick={handleClearCache}
-                                disabled={isClearing}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    background: 'var(--card-bg)',
-                                    border: '1px solid var(--card-border)',
-                                    borderRadius: '8px',
-                                    padding: '8px',
-                                    cursor: isClearing ? 'wait' : 'pointer',
-                                    color: 'var(--text-muted)',
-                                    transition: 'all 0.2s',
-                                    marginTop: '4px',
-                                    opacity: isClearing ? 0.5 : 1
-                                }}
-                                title="Refresh & Clear Cache"
-                                onMouseEnter={(e) => { if(!isClearing) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-primary)'; } }}
-                                onMouseLeave={(e) => { if(!isClearing) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--card-border)'; } }}
-                            >
-                                <svg 
-                                    width="18" 
-                                    height="18" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round"
-                                    className={isClearing ? "spinner" : ""}
-                                >
-                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-5.27l3.08-3.08"/>
-                                </svg>
-                            </button>
+
                         </div>
 
                         <div className="global-filters">

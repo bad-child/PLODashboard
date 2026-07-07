@@ -33,9 +33,11 @@ Route::middleware(['auth', 'permission:admin.settings'])->prefix('admin')->name(
         $setting = \App\Models\Setting::where('key', 'running_text')->first();
         $themeSetting = \App\Models\Setting::where('key', 'theme_mode')->first();
         $permissionsSetting = \App\Models\Setting::where('key', 'role_permissions')->first();
+        $privacyPolicySetting = \App\Models\Setting::where('key', 'privacy_policy')->first();
         return Inertia::render('Admin/Settings', [
             'runningText' => $setting ? $setting->value : '',
             'themeMode' => $themeSetting ? $themeSetting->value : 'dark',
+            'privacyPolicy' => $privacyPolicySetting ? $privacyPolicySetting->value : '',
             'rolePermissions' => $permissionsSetting && $permissionsSetting->value ? json_decode($permissionsSetting->value, true) : [],
             'customRoles' => \App\Models\User::getCustomRoles(),
             'availableRoles' => \App\Models\User::getAvailableRoles(),
@@ -45,6 +47,7 @@ Route::middleware(['auth', 'permission:admin.settings'])->prefix('admin')->name(
         ]);
     })->name('settings');
     Route::post('/settings/running-text', [\App\Http\Controllers\AdminUserController::class, 'updateRunningText'])->name('settings.running_text.update');
+    Route::post('/settings/privacy-policy', [\App\Http\Controllers\AdminUserController::class, 'updatePrivacyPolicy'])->name('settings.privacy_policy.update');
     Route::post('/settings/theme', [\App\Http\Controllers\AdminUserController::class, 'updateTheme'])->name('settings.theme.update');
     Route::post('/settings/permissions', [\App\Http\Controllers\AdminUserController::class, 'updateMenuPermissions'])->name('settings.permissions.update');
     Route::post('/settings/roles', [\App\Http\Controllers\AdminUserController::class, 'storeRole'])->name('settings.roles.store');

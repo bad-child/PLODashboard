@@ -9,5 +9,6 @@ class Setting extends Model
 {
     use HasFactory;
     
+    protected $table = 'TBL_R_Settings';
     protected $fillable = ['key', 'value'];
 }

@@ -4,7 +4,7 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 
-export default function Settings({ runningText, themeMode, rolePermissions, customRoles = {}, availableRoles = {}, customFeatures = {}, availableFeatures = {}, appFeaturesDictionary = {} }) {
+export default function Settings({ runningText, privacyPolicy, themeMode, rolePermissions, customRoles = {}, availableRoles = {}, customFeatures = {}, availableFeatures = {}, appFeaturesDictionary = {} }) {
     const { props, url } = usePage();
     const { auth, flash } = props;
     const user = auth?.user;
@@ -15,6 +15,9 @@ export default function Settings({ runningText, themeMode, rolePermissions, cust
     
     const [rtValue, setRtValue] = useState(runningText || '');
     const [rtProcessing, setRtProcessing] = useState(false);
+
+    const [ppValue, setPpValue] = useState(privacyPolicy || '');
+    const [ppProcessing, setPpProcessing] = useState(false);
     
     const [themeValue, setThemeValue] = useState(themeMode || 'dark');
     const [themeProcessing, setThemeProcessing] = useState(false);
@@ -35,6 +38,15 @@ export default function Settings({ runningText, themeMode, rolePermissions, cust
         router.post(route('admin.settings.running_text.update'), { text: rtValue }, {
             preserveScroll: true,
             onFinish: () => setRtProcessing(false),
+        });
+    };
+
+    const handleSavePrivacyPolicy = (e) => {
+        e.preventDefault();
+        setPpProcessing(true);
+        router.post(route('admin.settings.privacy_policy.update'), { privacy_policy: ppValue }, {
+            preserveScroll: true,
+            onFinish: () => setPpProcessing(false),
         });
     };
     const handleSaveTheme = (e) => {
@@ -200,6 +212,35 @@ export default function Settings({ runningText, themeMode, rolePermissions, cust
                             </div>
                             <PrimaryButton disabled={rtProcessing} type="submit" className="w-full justify-center h-14 text-lg rounded-xl shadow-lg shadow-purple-500/30 !bg-purple-600 hover:!bg-purple-700">
                                 {rtProcessing ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </PrimaryButton>
+                        </form>
+                    </div>
+                    )}
+
+                    {/* Privacy Policy Settings */}
+                    {currentFeature === 'privacy_policy' && (auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.privacy_policy')) && (
+                    <div className="col-span-1 xl:col-span-2 theme-bg-card theme-border border rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl p-8 transition-all hover:shadow-cyan-500/10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="p-3 bg-cyan-500/20 rounded-2xl">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-cyan-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-bold theme-text-primary">Privacy Policy</h2>
+                                <p className="text-sm theme-text-muted mt-1">Ubah teks kebijakan privasi yang tampil di halaman login (Bisa menggunakan tag HTML dasar seperti &lt;p&gt;, &lt;b&gt;, &lt;br&gt;).</p>
+                            </div>
+                        </div>
+                        
+                        <form onSubmit={handleSavePrivacyPolicy} className="flex flex-col gap-5 mt-8">
+                            <div className="w-full">
+                                <textarea
+                                    value={ppValue}
+                                    onChange={(e) => setPpValue(e.target.value)}
+                                    className="w-full h-64 p-4 theme-bg-input theme-border rounded-xl shadow-inner placeholder-gray-500 focus:border-cyan-500 focus:ring-cyan-500 text-sm transition-colors"
+                                    placeholder="Masukkan teks kebijakan privasi di sini..."
+                                />
+                            </div>
+                            <PrimaryButton disabled={ppProcessing} type="submit" className="w-full justify-center h-14 text-lg rounded-xl shadow-lg shadow-cyan-500/30 !bg-cyan-600 hover:!bg-cyan-700">
+                                {ppProcessing ? 'Menyimpan...' : 'Simpan Perubahan'}
                             </PrimaryButton>
                         </form>
                     </div>

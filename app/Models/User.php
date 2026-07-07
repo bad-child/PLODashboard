@@ -16,6 +16,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    protected $table = 'TBL_M_User';
     protected $primaryKey = 'nik';
     public $incrementing = false;
     protected $keyType = 'string';

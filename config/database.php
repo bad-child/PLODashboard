@@ -145,7 +145,7 @@ return [
     */
 
     'migrations' => [
-        'table' => 'migrations',
+        'table' => 'TBL_T_Migrations',
         'update_date_on_publish' => true,
     ],
 

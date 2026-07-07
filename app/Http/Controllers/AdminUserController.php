@@ -116,6 +116,22 @@ class AdminUserController extends Controller
         }
     }
 
+    public function updatePrivacyPolicy(Request $request)
+    {
+        $request->validate([
+            'privacy_policy' => 'nullable|string'
+        ]);
+
+        Setting::updateOrCreate(
+            ['key' => 'privacy_policy'],
+            ['value' => $request->privacy_policy]
+        );
+
+        \Illuminate\Support\Facades\Cache::forget('privacy_policy');
+
+        return redirect()->back()->with('success', 'Privacy Policy updated successfully');
+    }
+
     public function updateRunningText(Request $request)
     {
         $request->validate([

@@ -132,6 +132,9 @@ export default function DashboardLayout({ children }) {
                                                 {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.running_text')) && (
                                                     <Link href={route('admin.settings') + '?feature=running_text'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Ubah Teks Berjalan</Link>
                                                 )}
+                                                {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.privacy_policy')) && (
+                                                    <Link href={route('admin.settings') + '?feature=privacy_policy'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Ubah Privacy Policy</Link>
+                                                )}
                                                 {(auth?.permissions?.includes('admin.settings') || auth?.permissions?.includes('config.settings.roles')) && (
                                                     <Link href={route('admin.settings') + '?feature=roles'} className="block px-4 py-2 text-sm font-medium text-black hover:bg-gray-100 hover:text-blue-600 transition-colors">Manajemen Role</Link>
                                                 )}
