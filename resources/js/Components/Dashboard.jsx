@@ -13,6 +13,10 @@ const formatCurrency = (value) => {
     return `Rp ${value}`;
 };
 
+const formatExactCurrency = (value) => {
+    return 'Rp ' + new Intl.NumberFormat('id-ID').format(value || 0);
+};
+
 const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "CommitmentItem", labelKey = "DescCommit", minWidth = '400px', maxWidth = '500px' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -774,7 +778,7 @@ const SummaryTable = ({ data, loading }) => {
                                     <td rowSpan="2" className="sticky-col fw-bold">{row.DescCommit}</td>
                                     <td className="sticky-col-2">Plan</td>
                                     {data.columns.map((col, cIdx) => (
-                                        <td key={`plan-${cIdx}`}>{formatCurrency(row.Plan[col] || 0)}</td>
+                                        <td key={`plan-${cIdx}`}>{formatExactCurrency(row.Plan[col] || 0)}</td>
                                     ))}
                                 </tr>
                                 <tr>
@@ -785,7 +789,7 @@ const SummaryTable = ({ data, loading }) => {
                                         const isOver = actualVal > planVal;
                                         return (
                                             <td key={`act-${cIdx}`} style={isOver ? { color: '#ef4444', fontWeight: '600' } : {}}>
-                                                {formatCurrency(actualVal)}
+                                                {formatExactCurrency(actualVal)}
                                             </td>
                                         );
                                     })}
