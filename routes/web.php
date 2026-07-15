@@ -105,6 +105,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/dashboard/cost-composition', [\App\Http\Controllers\DashboardController::class, 'getCostComposition'])->name('api.dashboard.cost_composition');
     Route::get('/api/dashboard/kpi', [\App\Http\Controllers\DashboardController::class, 'getKpiCards'])->name('api.dashboard.kpi');
     Route::get('/api/settings/running-text', [\App\Http\Controllers\DashboardController::class, 'getRunningText'])->name('api.settings.running_text');
+    Route::get('/api/dashboard/sites', [\App\Http\Controllers\DashboardController::class, 'getSites'])->name('api.dashboard.sites');
     Route::get('/api/dashboard/fund-centers', [\App\Http\Controllers\DashboardController::class, 'getFundCenters'])->name('api.dashboard.fund_centers');
     Route::get('/api/dashboard/top-variances', [\App\Http\Controllers\DashboardController::class, 'getTopVariances'])->name('api.dashboard.top_variances');
     Route::get('/api/dashboard/summary-table', [\App\Http\Controllers\DashboardController::class, 'getSummaryTable'])->name('api.dashboard.summary_table');

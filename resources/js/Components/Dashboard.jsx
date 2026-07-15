@@ -17,7 +17,7 @@ const formatExactCurrency = (value) => {
     return 'Rp ' + new Intl.NumberFormat('id-ID').format(value || 0);
 };
 
-const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "CommitmentItem", labelKey = "DescCommit", minWidth = '400px', maxWidth = '500px' }) => {
+const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "CommitmentItem", labelKey = "DescCommit", minWidth = '400px', maxWidth = '500px', displayLabelOnly = false, disabled = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
     const wrapperRef = useRef(null);
@@ -37,7 +37,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
     );
 
     const selectedItemObj = items.find(item => item[valueKey] === value);
-    const displayValue = selectedItemObj ? `${selectedItemObj[valueKey]} (${selectedItemObj[labelKey]})` : placeholder;
+    const displayValue = selectedItemObj ? (displayLabelOnly ? selectedItemObj[labelKey] : `${selectedItemObj[valueKey]} (${selectedItemObj[labelKey]})`) : placeholder;
 
     return (
         <div ref={wrapperRef} style={{ position: 'relative', width: '100%', minWidth: minWidth, maxWidth: maxWidth, flex: '1 1 auto' }}>
@@ -49,9 +49,11 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     minHeight: '36px',
-                    width: '100%'
+                    width: '100%',
+                    opacity: disabled ? 0.5 : 1,
+                    cursor: disabled ? 'not-allowed' : 'pointer'
                 }}
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => !disabled && setIsOpen(!isOpen)}
             >
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {displayValue}
@@ -113,7 +115,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
                                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--card-border)'}
                                 onMouseLeave={(e) => e.currentTarget.style.background = value === item[valueKey] ? 'var(--card-border)' : 'transparent'}
                             >
-                                {item[valueKey]} ({item[labelKey]})
+                                {displayLabelOnly ? item[labelKey] : `${item[valueKey]} (${item[labelKey]})`}
                             </div>
                         ))}
                         {filteredItems.length === 0 && (
@@ -129,7 +131,7 @@ const SearchableSelect = ({ items, value, onChange, placeholder, valueKey = "Com
 };
 
 // New Monthly Trend Chart
-const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter }) => {
+const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -146,6 +148,8 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
             day_start: selectedDayStart,
             day_end: selectedDayEnd,
             fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
         };
         // Add nocache param on retries to bust server cache
         if (retryCount > 0) {
@@ -178,7 +182,7 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
 
     useEffect(() => {
         fetchData();
-    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite]);
 
     if (loading || !data) {
         return (
@@ -259,7 +263,7 @@ const MonthlyTrendChart = ({ filterType, selectedYearStart, selectedYearEnd, sel
 };
 
 // Reusable Dynamic Bar Chart (Now Nominal instead of Percentage)
-const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, planColor, actualColor, commitmentItems, selectedFundCenter }) => {
+const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, planColor, actualColor, commitmentItems, selectedFundCenter, selectedSite }) => {
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
@@ -278,6 +282,8 @@ const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearS
                 day_start: selectedDayStart,
                 day_end: selectedDayEnd,
                 fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
             };
 
             if (selectedItem) {
@@ -301,7 +307,7 @@ const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearS
 
     useEffect(() => {
         fetchChartData();
-    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedItem, defaultCategory, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedItem, defaultCategory, selectedFundCenter, selectedSite]);
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
@@ -386,7 +392,7 @@ const NominalChart = ({ defaultTitle, defaultCategory, filterType, selectedYearS
 };
 
 // New Cost Composition Donut Chart
-const CostCompositionChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter }) => {
+const CostCompositionChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -404,6 +410,8 @@ const CostCompositionChart = ({ filterType, selectedYearStart, selectedYearEnd, 
                         day_start: selectedDayStart,
                         day_end: selectedDayEnd,
                         fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
                     }
                 });
                 setData(response.data);
@@ -415,7 +423,7 @@ const CostCompositionChart = ({ filterType, selectedYearStart, selectedYearEnd, 
         };
 
         fetchData();
-    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite]);
 
     if (loading || !data) {
         return (
@@ -575,7 +583,7 @@ const VarianceDetailsModal = ({ isOpen, onClose, parentDesc, filterParams }) => 
 };
 
 // New Top 5 Variance Chart
-const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, onBarClick }) => {
+const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite, onBarClick }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -593,6 +601,8 @@ const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, sele
                         day_start: selectedDayStart,
                         day_end: selectedDayEnd,
                         fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
                     }
                 });
                 setData(response.data);
@@ -604,7 +614,7 @@ const TopVarianceChart = ({ filterType, selectedYearStart, selectedYearEnd, sele
         };
 
         fetchData();
-    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedYearEnd, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite]);
 
     if (loading || !data) {
         return (
@@ -831,6 +841,8 @@ export default function Dashboard({ role = 'user' }) {
     const [selectedDayEnd, setSelectedDayEnd] = useState('10');
 
     const [commitmentItems, setCommitmentItems] = useState([]);
+    const [sites, setSites] = useState([]);
+    const [selectedSite, setSelectedSite] = useState('');
     const [fundCenters, setFundCenters] = useState([]);
     const [selectedFundCenter, setSelectedFundCenter] = useState('');
 
@@ -863,6 +875,12 @@ export default function Dashboard({ role = 'user' }) {
                 setCommitmentItems(response.data);
             } catch (err) {
                 console.error("Failed to load commitment items", err);
+            }
+            try {
+                const sResponse = await axios.get(route('api.dashboard.sites'));
+                setSites(sResponse.data);
+            } catch (err) {
+                console.error("Failed to load sites", err);
             }
             try {
                 const fcResponse = await axios.get(route('api.dashboard.fund_centers'));
@@ -911,6 +929,8 @@ export default function Dashboard({ role = 'user' }) {
                         day_start: selectedDayStart,
                         day_end: selectedDayEnd,
                         fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
                     }
                 });
                 setKpiData(response.data);
@@ -922,7 +942,7 @@ export default function Dashboard({ role = 'user' }) {
         };
 
         fetchKpis();
-    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite]);
 
     useEffect(() => {
         const fetchSummary = async () => {
@@ -938,6 +958,8 @@ export default function Dashboard({ role = 'user' }) {
                         day_start: selectedDayStart,
                         day_end: selectedDayEnd,
                         fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
                     }
                 });
                 setSummaryData(response.data);
@@ -949,7 +971,7 @@ export default function Dashboard({ role = 'user' }) {
         };
 
         fetchSummary();
-    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter]);
+    }, [filterType, selectedYearStart, selectedMonthStart, selectedMonthEnd, selectedDayStart, selectedDayEnd, selectedFundCenter, selectedSite]);
 
     const hasDashboardPermissions = (auth?.permissions || []).some(p => p.startsWith('dashboard.'));
 
@@ -964,9 +986,25 @@ export default function Dashboard({ role = 'user' }) {
                         </div>
 
                         <div className="global-filters">
+                            {/* Site Filter */}
+                            <SearchableSelect
+                                items={sites}
+                                value={selectedSite}
+                                onChange={(val) => {
+                                    setSelectedSite(val);
+                                    if (val !== selectedSite) setSelectedFundCenter('');
+                                }}
+                                placeholder="-- Pilih Site --"
+                                valueKey="Site"
+                                labelKey="Site"
+                                minWidth="150px"
+                                maxWidth="250px"
+                                displayLabelOnly={true}
+                            />
+
                             {/* Fund Center Filter */}
                             <SearchableSelect
-                                items={fundCenters}
+                                items={selectedSite ? fundCenters.filter(fc => fc.Site === selectedSite) : fundCenters}
                                 value={selectedFundCenter}
                                 onChange={setSelectedFundCenter}
                                 placeholder="-- Pilih Fund Center --"
@@ -974,6 +1012,8 @@ export default function Dashboard({ role = 'user' }) {
                                 labelKey="Description"
                                 minWidth="150px"
                                 maxWidth="250px"
+                                displayLabelOnly={true}
+                                disabled={!selectedSite}
                             />
 
                             <select className="filter-select" value={filterType} onChange={(e) => setFilterType(e.target.value)}>
@@ -1098,7 +1138,7 @@ export default function Dashboard({ role = 'user' }) {
                             selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                             selectedDayStart={selectedDayStart}
                             selectedDayEnd={selectedDayEnd}
-                            selectedFundCenter={selectedFundCenter}
+                            selectedFundCenter={selectedFundCenter} selectedSite={selectedSite}
                         />
                     )}
 
@@ -1120,7 +1160,7 @@ export default function Dashboard({ role = 'user' }) {
                                 planColor="#3b82f6"
                                 actualColor="#f97316"
                                 commitmentItems={commitmentItems}
-                                selectedFundCenter={selectedFundCenter}
+                                selectedFundCenter={selectedFundCenter} selectedSite={selectedSite}
                             />
                         )}
 
@@ -1134,7 +1174,7 @@ export default function Dashboard({ role = 'user' }) {
                                 selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                                 selectedDayStart={selectedDayStart}
                                 selectedDayEnd={selectedDayEnd}
-                                selectedFundCenter={selectedFundCenter}
+                                selectedFundCenter={selectedFundCenter} selectedSite={selectedSite}
                             />
                         )}
                     </div>
@@ -1149,7 +1189,7 @@ export default function Dashboard({ role = 'user' }) {
                             selectedMonthEnd={filterType === 'daily' ? selectedMonthStart : selectedMonthEnd}
                             selectedDayStart={selectedDayStart}
                             selectedDayEnd={selectedDayEnd}
-                            selectedFundCenter={selectedFundCenter}
+                            selectedFundCenter={selectedFundCenter} selectedSite={selectedSite}
                             onBarClick={handleBarClick}
                         />
                     )}
@@ -1177,6 +1217,8 @@ export default function Dashboard({ role = 'user' }) {
                     day_start: selectedDayStart,
                     day_end: selectedDayEnd,
                     fund_center: selectedFundCenter,
+            site: selectedSite,
+                        
                 }}
             />
 

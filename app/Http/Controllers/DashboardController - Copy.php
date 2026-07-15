@@ -19,7 +19,7 @@ class DashboardController extends Controller
 
     private function getCacheKey(Request $request, $prefix)
     {
-        $version = 'v4'; // Increment this on every deploy to invalidate old cache
+        $version = 'v3'; // Increment this on every deploy to invalidate old cache
         $params = $request->all();
         ksort($params);
         return 'dashboard_' . $version . '_' . $prefix . '_' . md5(json_encode($params));
@@ -80,28 +80,12 @@ class DashboardController extends Controller
             }
         }
 
-        if ($request->has('site') && !empty($request->input('site'))) {
-            $from = $query->from;
-            $tableName = is_string($from) ? $from : 'TBL_TEMP_PARENT_ACTUAL';
-            
-            $site = $request->input('site');
-            $query->whereIn($tableName . '.FundCenter', function($q) use ($site) {
-                $q->select('FundCenter')
-                  ->from('TBL_M_FundCenter')
-                  ->where('Site', $site);
-            });
-        }
-
         if ($request->has('fund_center') && !empty($request->input('fund_center'))) {
+            // Because applyRangeFilters is called on queries that might join TBL_M_Fund_Center, we need to be careful with column ambiguity.
+            // But we can just use the table name from the query's from clause.
             $from = $query->from;
             $tableName = is_string($from) ? $from : 'TBL_TEMP_PARENT_ACTUAL';
-            
-            $desc = $request->input('fund_center');
-            $query->whereIn($tableName . '.FundCenter', function($q) use ($desc) {
-                $q->select('FundCenter')
-                  ->from('TBL_M_FundCenter')
-                  ->where('Description', $desc);
-            });
+            $query->whereRaw("SUBSTRING(\"$tableName\".\"FundCenter\", 1, 3) = ?", [$request->input('fund_center')]);
         }
 
         return $query;
@@ -145,30 +129,12 @@ class DashboardController extends Controller
         return response()->json($items);
     }
 
-    public function getSites()
+    public function getFundCenters()
     {
-        $items = DB::table('TBL_M_FundCenter')
-            ->select('Site')
-            ->distinct()
-            ->whereNotNull('Site')
-            ->where('Site', '!=', '')
-            ->orderBy('Site')
+        $items = DB::table('TBL_M_Fund_Center')
+            ->select('Code', 'Desc as Description')
+            ->orderBy('Desc')
             ->get();
-            
-        return response()->json($items);
-    }
-
-    public function getFundCenters(Request $request)
-    {
-        $query = DB::table('TBL_M_FundCenter')
-            ->select('Description as Code', 'Description', 'Site')
-            ->distinct();
-            
-        if ($request->has('site') && !empty($request->input('site'))) {
-            $query->where('Site', $request->input('site'));
-        }
-            
-        $items = $query->orderBy('Description')->get();
             
         return response()->json($items);
     }
@@ -185,11 +151,11 @@ class DashboardController extends Controller
             $category = $request->input('category'); 
 
             $budgetQuery = DB::table('TBL_TEMP_PARENT_BUDGET')
-                ->join('TBL_M_FundCenter', 'TBL_TEMP_PARENT_BUDGET.FundCenter', '=', 'TBL_M_FundCenter.FundCenter')
-                ->select('TBL_M_FundCenter.Description as FundCenterDesc');
+                ->join('TBL_M_Fund_Center', DB::raw('SUBSTRING("TBL_TEMP_PARENT_BUDGET"."FundCenter", 1, 3)'), '=', 'TBL_M_Fund_Center.Code')
+                ->select('TBL_M_Fund_Center.Desc as FundCenterDesc');
             $actualQuery = DB::table('TBL_TEMP_PARENT_ACTUAL')
-                ->join('TBL_M_FundCenter', 'TBL_TEMP_PARENT_ACTUAL.FundCenter', '=', 'TBL_M_FundCenter.FundCenter')
-                ->select('TBL_M_FundCenter.Description as FundCenterDesc');
+                ->join('TBL_M_Fund_Center', DB::raw('SUBSTRING("TBL_TEMP_PARENT_ACTUAL"."FundCenter", 1, 3)'), '=', 'TBL_M_Fund_Center.Code')
+                ->select('TBL_M_Fund_Center.Desc as FundCenterDesc');
 
             $budgetQuery = $this->applyRangeFilters($budgetQuery, $filter, $request);
             $actualQuery = $this->applyRangeFilters($actualQuery, $filter, $request);
@@ -212,8 +178,8 @@ class DashboardController extends Controller
                 $actualQuery->selectRaw("SUM(CASE WHEN \"TBL_TEMP_PARENT_ACTUAL\".\"DescCommit\" LIKE ? THEN $actualCol ELSE 0 END) as target_actual", [$descCommitPattern]);
             }
 
-            $budgetQuery->selectRaw("SUM($budgetCol) as total_budget")->groupBy('TBL_M_FundCenter.Description');
-            $actualQuery->selectRaw("SUM($actualCol) as total_actual")->groupBy('TBL_M_FundCenter.Description');
+            $budgetQuery->selectRaw("SUM($budgetCol) as total_budget")->groupBy('TBL_M_Fund_Center.Desc');
+            $actualQuery->selectRaw("SUM($actualCol) as total_actual")->groupBy('TBL_M_Fund_Center.Desc');
 
             $budgets = $budgetQuery->get()->keyBy('FundCenterDesc');
             $actuals = $actualQuery->get()->keyBy('FundCenterDesc');
@@ -579,13 +545,17 @@ class DashboardController extends Controller
             $actualCol = $dailySumStr ? $dailySumStr : '"ActualCost"';
             $budgetCol = $dailySumStr ? $dailySumStr : '"Budget"';
 
-            // Query ACTUAL
+            // Query ACTUAL - only filter by year
+            $yearStart = $request->input('year_start', date('Y'));
+            $yearEnd = $request->input('year_end', date('Y'));
+            
             $actualQuery = DB::table('TBL_TEMP_PARENT_ACTUAL')
-                ->select('Bulan', DB::raw("SUM($actualCol) as actual_total"));
-            
-            $actualQuery = $this->applyRangeFilters($actualQuery, 'yearly', $request); // Use yearly to get all months
+                ->select('Bulan', DB::raw("SUM($actualCol) as actual_total"))
+                ->whereBetween('Tahun', [$yearStart, $yearEnd]);
+            if ($request->has('fund_center') && !empty($request->input('fund_center'))) {
+                $actualQuery->whereRaw("SUBSTRING(\"TBL_TEMP_PARENT_ACTUAL\".\"FundCenter\", 1, 3) = ?", [$request->input('fund_center')]);
+            }
             $actualResults = $actualQuery->groupBy('Bulan')->get();
-            
             $actualMap = [];
             foreach ($actualResults as $r) $actualMap[strtoupper($r->Bulan)] = (float) $r->actual_total;
 
@@ -595,9 +565,11 @@ class DashboardController extends Controller
             for ($attempt = 1; $attempt <= 3; $attempt++) {
                 try {
                     $budgetQuery = DB::table('TBL_TEMP_PARENT_BUDGET')
-                        ->select('Bulan', DB::raw("SUM($budgetCol) as budget_total"));
-                        
-                    $budgetQuery = $this->applyRangeFilters($budgetQuery, 'yearly', $request);
+                        ->select('Bulan', DB::raw("SUM($budgetCol) as budget_total"))
+                        ->whereBetween('Tahun', [$yearStart, $yearEnd]);
+                    if ($request->has('fund_center') && !empty($request->input('fund_center'))) {
+                        $budgetQuery->whereRaw("SUBSTRING(\"TBL_TEMP_PARENT_BUDGET\".\"FundCenter\", 1, 3) = ?", [$request->input('fund_center')]);
+                    }
                     $budgetResults = $budgetQuery->groupBy('Bulan')->get();
                     
                     foreach ($budgetResults as $r) {
